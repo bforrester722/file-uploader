@@ -1,0 +1,42 @@
+{
+  "name": "@spriteful/file-uploader",
+  "version": "1.0.0",
+  "description": "Accepts files from user and handles uploading/optimization/deleting/previewing/rearranging",
+  "main": "file-uploader.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spriteful/file-uploader.git"
+  },
+  "author": "Spriteful spritefuldev@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/spriteful/file-uploader/issues"
+  },
+  "homepage": "https://github.com/spriteful/file-uploader#readme",
+  "dependencies": {
+    "@polymer/iron-image": "^3.0.2",
+    "@polymer/paper-button": "^3.0.1",
+    "@polymer/paper-input": "^3.0.2",
+    "@polymer/polymer": "^3.2.0",
+    "@spriteful/app-icons": "^1.0.6",
+    "@spriteful/app-modal": "^1.0.0",
+    "@spriteful/app-spinner": "^1.0.0",
+    "@spriteful/drag-drop-files": "^1.0.1",
+    "@spriteful/drag-drop-list": "^1.0.0",
+    "@spriteful/lambda": "^1.3.9",
+    "@spriteful/services": "^2.1.6",
+    "@spriteful/spriteful-element": "^1.0.4",
+    "@spriteful/utils": "^1.2.4"
+  },
+  "devDependencies": {
+    "@polymer/iron-demo-helpers": "^3.1.0",
+    "@polymer/test-fixture": "^4.0.2",
+    "@webcomponents/webcomponentsjs": "^2.2.10",
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4",
+    "wct-mocha": "^1.0.0"
+  }
+}
