@@ -1,0 +1,234 @@
+
+<style>
+
+  :host {
+    display: block;
+    width:   100%;
+    background-color:             var(--app-background-color);
+    --drop-zone-background-color: var(--app-light-color);
+  }
+
+  #container {
+    opacity: 0;
+  }
+  
+  drag-drop-list {
+    display:        flex;
+    flex-direction: column;
+  }
+
+  .center-list {
+    align-items: center;
+  }
+
+  .sortable {
+    display:          inline-flex;
+    position:         relative;
+    background-color: black;
+  }
+
+  .list-images {
+    width:            20vmax;
+    min-width:        128px;
+    min-height:       128px;
+    background-color: black;
+    transition:       transform 0.2s ease-out;
+  }
+
+  .list-images:hover {
+    transform: scale(1.1, 1.1);
+  }
+
+  .list-names {
+    position:         absolute;
+    bottom:           0px;
+    left:             0px;
+    padding:          8px;
+    font-size:        14px;
+    color:            white;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  #max-width-container {
+    display:        flex;
+    flex-direction: column;
+    align-items:    center;
+    margin:         32px 0px;
+  }
+
+  .max-width {
+    max-width: 400px;
+    width:     100%;
+  }
+
+  #deleteArea {
+    display:          flex;
+    flex-direction:   column;
+    align-items:      center;
+    margin:           16px 0px;
+    padding:          16px 0px;
+    color:            var(--app-error-color);
+    background-color: var(--app-disabled-color);
+  }
+
+  iron-icon {
+    width:  40px;
+    height: 40px;
+  }
+
+  #fileDropZone {
+    margin:                  16px 0px;
+    background-color:        var(--drop-zone-background-color);
+    --yo-file-hover-bgcolor: var(--app-primary-color);
+  }
+
+  #publish-changes-btn {
+    margin:           16px 0px;
+    color:            white;
+    background-color: var(--app-accent-color);
+  }
+
+  #publish-changes-btn[disabled] {
+    color:            var(--diabled-text-color);
+    background-color: var(--app-disabled-color);
+  }
+
+  .no-save-button {
+    display: none;
+  }
+
+  strong {
+    color:     var(--app-primary-color);
+    font-size: 20px;
+  }
+
+  .file-name-inputs {
+    display: flex;
+  }
+
+  .rename-modal-images {
+    width:        64px;
+    height:       64px;
+    margin-right: 8px;
+  }
+
+  .modal-call-to-action-btns {
+    background-color: var(--app-primary-color);
+    color:            var(--light-text-color);
+  }
+
+  #dismiss-btn {
+    color: var(--app-primary-color);
+  }
+
+</style>
+
+
+<div id="container">
+  <drag-drop-list id="dragList"
+                  class$="[[__computeListClass(multiple)]]"
+                  sortable=".sortable" 
+                  on-item-dropped="__handleDeleteDrop" 
+                  on-sort-finish="__handleSortFinished">
+    <template is="dom-repeat" items="[[_items]]">
+      <div class="sortable" item="[[item]]">
+        <iron-image class="list-images"
+                    src$="[[__computeThumbnailSrc(item)]]" 
+                    fade 
+                    preload 
+                    sizing="contain"
+                    on-loaded-changed="__handleImageLoadedChanged">
+        </iron-image>
+        <div class="list-names">[[item.name]]</div>
+      </div>
+    </template>
+  </drag-drop-list>
+
+  <div id="max-width-container">
+    <div id="deleteArea" class="max-width">
+      <iron-icon icon="app-icons:delete-forever"></iron-icon>
+      <div>Drag image here to delete</div>
+    </div>
+    <drag-drop-files id="fileDropZone"
+                     class="max-width"
+                     disable-auto-upload
+                     directory="[[_directory]]"
+                     multiple="[[multiple]]"
+                     on-disabled-auto-upload-files-added="__handleFilesAdded"
+                     on-file-removed="__handleFileRemoved"
+                     on-file-saved="__handleFileSaved">
+    </drag-drop-files>
+    <paper-button id="publish-changes-btn" 
+                  class$="max-width [[__computePublishBtnClass(noSaveButton)]]"
+                  disabled="[[_publishChangesBtnDisabled]]"
+                  on-click="__publishChangesButtonClicked" 
+                  raised>publish changes
+    </paper-button>
+  </div>
+</div>
+
+
+<app-modal id="deleteConfirmModal"
+           heading="Confirm Delete">
+  <div id="content-div" slot="card-content-slot">
+    <p>
+      Please confirm that you want to delete <strong>[[_itemToDelete.name]]</strong>.
+    </p>
+    <p>
+      This action cannot be undone!
+    </p>
+  </div>
+  <div slot="card-actions-slot">
+    <paper-button class="modal-call-to-action-btns" 
+                  on-click="__confirmDeleteButtonClicked">
+      delete
+    </paper-button>
+    <paper-button class="modal-dismiss-btns" on-click="__dismissDeleteConfirmButtonClicked">
+      dismiss
+    </paper-button>         
+  </div>
+</app-modal>
+
+
+<app-modal id="renameFilesModal"
+           heading="Rename Files">
+  <div id="content-div" slot="card-content-slot">
+    <p>
+      Do you want to rename the files?
+    </p>
+    <p>
+      The file name is used by images to create actions in the Client app.
+    </p>
+    <template is="dom-repeat" items="[[_filesToRename]]">
+      <div class="file-name-inputs">
+        <iron-image class="rename-modal-images"
+                    src$="[[item.tempUrl]]" 
+                    fade 
+                    preload 
+                    sizing="contain">
+        </iron-image>
+        <paper-input allowed-pattern="[^/\s/\f/\n/\r/\t/\v]"
+                     autocorrect
+                     autofocus
+                     autocomplete
+                     auto-validate
+                     label="File Name"
+                     on-value-changed="__renameInputChanged"
+                     placeholder="[[__computeFileNamePlaceholder(item.name)]]"
+                     tabindex="0">
+        </paper-input>
+      </div>
+    </template>
+  </div>
+  <div slot="card-actions-slot">
+    <paper-button class="modal-call-to-action-btns"               
+                  on-click="__saveFileNamesButtonClicked">
+      save
+    </paper-button>
+    <paper-button class="modal-dismiss-btns" on-click="__dismissRenameFilesModalButtonClicked">
+      dismiss
+    </paper-button>    
+  </div>
+</app-modal>
+
+<app-spinner id="spinner" full-screen></app-spinner>
