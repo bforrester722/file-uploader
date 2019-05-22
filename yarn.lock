@@ -670,16 +670,25 @@
     typeface-roboto "^0.0.54"
     web-animations-js "^2.3.1"
 
-"@spriteful/drag-drop-files@^1.0.1":
+"@spriteful/cms-icons@^1.0.1":
   version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-files/-/drag-drop-files-1.0.1.tgz#3880c750a148fd015daf2e7da7503eb6e8e29955"
-  integrity sha512-LUmArdxb4aUUUvbQius16pXZtFTOIFLg7b7/5ch7FlkQ+cq9ZQjyZpVILucYKGUEj4GHZxZ2B74Cpu7ABgb0xA==
+  resolved "https://registry.yarnpkg.com/@spriteful/cms-icons/-/cms-icons-1.0.1.tgz#dc5c8a765a9843c065cfb23bec99ab9d0b9dc96b"
+  integrity sha512-gq8LMYDHJXHIvKioA4he2yqTVqggG3BJZH/lsxXMuQm2WqHKC0fe69luNCeYYgQShJrOMRo4NrT3Bsa+DY9ccg==
+  dependencies:
+    "@polymer/iron-iconset-svg" "^3.0.1"
+    "@polymer/polymer" "^3.1.0"
+
+"@spriteful/drag-drop-files@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-files/-/drag-drop-files-1.0.2.tgz#0f683941174d0fa68546ad63492bf384d681d7d1"
+  integrity sha512-DDglNbd0+kTb7iAGpuP5oOsvvEKNltT4TcqbOnXLZxTZ6KotxnPWPqA++BtFTzuzGGVQ4RiumxEf8fzOqnZIrA==
   dependencies:
     "@polymer/iron-icon" "^3.0.1"
     "@polymer/paper-icon-button" "^3.0.2"
     "@polymer/paper-progress" "^3.0.1"
     "@polymer/polymer" "^3.1.0"
     "@spriteful/app-icons" "^1.0.1"
+    "@spriteful/cms-icons" "^1.0.1"
     "@spriteful/services" "^2.1.3"
     "@spriteful/spriteful-element" "^1.0.4"
 
