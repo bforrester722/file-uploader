@@ -1,6 +1,6 @@
 {
   "name": "@spriteful/file-uploader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Accepts files from user and handles uploading/optimization/deleting/previewing/rearranging",
   "main": "file-uploader.js",
   "scripts": {
@@ -24,12 +24,14 @@
     "@spriteful/app-icons": "^1.0.6",
     "@spriteful/app-modal": "^1.0.0",
     "@spriteful/app-spinner": "^1.0.0",
-    "@spriteful/drag-drop-files": "^1.0.2",
+    "@spriteful/drag-drop-files": "^1.0.3",
     "@spriteful/drag-drop-list": "^1.0.0",
     "@spriteful/lambda": "^1.3.9",
     "@spriteful/services": "^2.1.6",
     "@spriteful/spriteful-element": "^1.0.4",
-    "@spriteful/utils": "^1.2.4"
+    "@spriteful/utils": "^1.2.4",
+    "child-process-promise": "^2.2.1",
+    "mkdirp-promise": "^5.0.1"
   },
   "devDependencies": {
     "@polymer/iron-demo-helpers": "^3.1.0",
