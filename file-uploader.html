@@ -2,14 +2,11 @@
 <style>
 
   :host {
-    display: block;
-    width:   100%;
+    display:  block;
+    width:    100%;
+    position: relative;
     background-color:             var(--app-background-color);
     --drop-zone-background-color: var(--app-light-color);
-  }
-
-  #container {
-    opacity: 0;
   }
   
   drag-drop-list {
@@ -112,6 +109,11 @@
     margin-right: 8px;
   }
 
+  .card-actions {
+    display:         flex;
+    justify-content: flex-end;
+  }
+
   .modal-call-to-action-btns {
     background-color: var(--app-primary-color);
     color:            var(--light-text-color);
@@ -130,8 +132,10 @@
                   sortable=".sortable" 
                   on-item-dropped="__handleDeleteDrop" 
                   on-sort-finish="__handleSortFinished">
-    <template is="dom-repeat" items="[[_items]]">
-      <div class="sortable" item="[[item]]">
+    <template is="dom-repeat" 
+              items="[[_items]]">
+      <div class="sortable" 
+           item="[[item]]">
         <iron-image class="list-images"
                     src$="[[__computeThumbnailSrc(item)]]" 
                     fade 
@@ -145,12 +149,14 @@
   </drag-drop-list>
 
   <div id="max-width-container">
-    <div id="deleteArea" class="max-width">
+    <div id="deleteArea" 
+         class="max-width">
       <iron-icon icon="app-icons:delete-forever"></iron-icon>
-      <div>Drag image here to delete</div>
+      <div>Drop file here to delete</div>
     </div>
     <drag-drop-files id="fileDropZone"
                      class="max-width"
+                     accept="[[__computeFileAccept(accept)]]"
                      disable-auto-upload
                      directory="[[_directory]]"
                      multiple="[[multiple]]"
@@ -158,46 +164,44 @@
                      on-file-removed="__handleFileRemoved"
                      on-file-saved="__handleFileSaved">
     </drag-drop-files>
-    <paper-button id="publish-changes-btn" 
-                  class$="max-width [[__computePublishBtnClass(noSaveButton)]]"
-                  disabled="[[_publishChangesBtnDisabled]]"
-                  on-click="__publishChangesButtonClicked" 
-                  raised>publish changes
-    </paper-button>
   </div>
 </div>
 
 
 <app-modal id="deleteConfirmModal"
            heading="Confirm Delete">
-  <div id="content-div" slot="card-content-slot">
+  <div id="content-div" 
+       slot="card-content-slot">
     <p>
       Please confirm that you want to delete <strong>[[_itemToDelete.name]]</strong>.
     </p>
     <p>
-      This action cannot be undone!
+      This action CANNOT be undone!
     </p>
   </div>
-  <div slot="card-actions-slot">
+  <div class="card-actions" 
+       slot="card-actions-slot">
+    <paper-button class="modal-dismiss-btns" 
+                  on-click="__dismissDeleteConfirmButtonClicked">
+      dismiss
+    </paper-button>   
     <paper-button class="modal-call-to-action-btns" 
                   on-click="__confirmDeleteButtonClicked">
       delete
-    </paper-button>
-    <paper-button class="modal-dismiss-btns" on-click="__dismissDeleteConfirmButtonClicked">
-      dismiss
-    </paper-button>         
+    </paper-button>      
   </div>
 </app-modal>
 
 
 <app-modal id="renameFilesModal"
-           heading="Rename Files">
-  <div id="content-div" slot="card-content-slot">
+           heading="[[__computeRenameModalHeading(multiple)]]">
+  <div id="content-div" 
+       slot="card-content-slot">
     <p>
-      Do you want to rename the files?
+      Do you want to rename [[__computeRenameModalPural(multiple)]]?
     </p>
     <p>
-      The file name is used by images to create actions in the Client app.
+      [[__computeRenameModalText(multiple)]]      
     </p>
     <template is="dom-repeat" items="[[_filesToRename]]">
       <div class="file-name-inputs">
@@ -220,15 +224,17 @@
       </div>
     </template>
   </div>
-  <div slot="card-actions-slot">
+  <div class="card-actions" 
+       slot="card-actions-slot">
+    <paper-button class="modal-dismiss-btns" 
+                  on-click="__dismissRenameFilesModalButtonClicked">
+      skip
+    </paper-button>   
     <paper-button class="modal-call-to-action-btns"               
                   on-click="__saveFileNamesButtonClicked">
-      save
-    </paper-button>
-    <paper-button class="modal-dismiss-btns" on-click="__dismissRenameFilesModalButtonClicked">
-      dismiss
-    </paper-button>    
+      save name
+    </paper-button> 
   </div>
 </app-modal>
 
-<app-spinner id="spinner" full-screen></app-spinner>
+<app-spinner id="spinner"></app-spinner>
