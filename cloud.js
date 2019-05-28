@@ -1,19 +1,41 @@
 'use strict';
 
-const os        = require('os');
-const fs        = require('fs');
-const path      = require('path');
-const crypto    = require('crypto');
-const mkdirp    = require('mkdirp-promise');
-const spawn     = require('child-process-promise').spawn;
 
-// When an image is uploaded in the Storage bucket,
-// it is optimized automatically using ImageMagick.
+// After an image is uploaded to the Storage bucket,
+// make it publicly downloadable, 
+// create an optimized version, 
+// create a thumbnail version then
+// save the public download urls to all three
+// into Firestore.
+// Uses ImageMagick to process images.
+// Dynamically merges the url data into the appropriate coll, doc and field
+
+
+const os     = require('os');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
+const mkdirp = require('mkdirp-promise');
+const spawn  = require('child-process-promise').spawn;
+
+
+const OPTIM_MAX_WIDTH = 1024;
+const THUMB_MAX_WIDTH = 256;
+const OPTIM_PREFIX    = 'optim_';
+const THUMB_PREFIX    = 'thumb_';
+
+
+const getRandomFileName = ext => `${crypto.randomBytes(20).toString('hex')}${ext}`;
+const getTempLocalFile  = name => path.join(os.tmpdir(), name);
+const getNewFilePath    = (dir, prefix, name) => 
+                            path.normalize(path.join(dir, `${prefix}${name}`));
+
 
 exports.init = (admin, functions) => {
 
   const optimizeStorageImages = functions.storage.object().onFinalize(async object => {
     try {
+
       const {
         contentType,
         metageneration,
@@ -22,46 +44,47 @@ exports.init = (admin, functions) => {
         size
       } = object;
 
-
-      // console.log('metadata: ', metadata);
-
-      // console.log('incoming file size: ', size);
-
       // Exit if this is triggered on a file that is not an image.
       if (!contentType.startsWith('image/')) {
         console.log('This file is not an image. Not optimizing.');
         return null;
       }
-      // Exit if the image is already optimized.
-      if ((metadata && metadata.optimized) || metageneration > 1) {
-        console.log('Exiting. Already optimized.');
+
+      // Exit if the image is already processed.
+      if ((metadata && metadata.processed) || metageneration > 1) {
+        console.log('Exiting. Already processed.');
         return null;
       }
-      
-      const newMetadata = {
-        metadata: {
-          'field':         metadata.field,
-          'optimized':    'true',
-          'originalSize': `${size}`
-        }
-      };
 
-      // Create random filename with same extension as uploaded file.
-      const randomFileName     = `${crypto.randomBytes(20).toString('hex')}${path.extname(filePath)}`;
-      const randomFileName2    = `${crypto.randomBytes(20).toString('hex')}${path.extname(filePath)}`;
-      const tempLocalFile      = path.join(os.tmpdir(), randomFileName);
+      const fileDir  = path.dirname(filePath);
+      const fileName = path.basename(filePath);
+      const fileExt  = path.extname(filePath);
+      // Create random filenames with same extension as uploaded file.
+      const randomFileName     = getRandomFileName(fileExt);
+      const randomFileName2    = getRandomFileName(fileExt);
+      const randomFileName3    = getRandomFileName(fileExt);
+      const tempLocalFile      = getTempLocalFile(randomFileName);
       const tempLocalDir       = path.dirname(tempLocalFile);
-      const tempLocalOptimFile = path.join(os.tmpdir(), randomFileName2);
+      const tempLocalOptimFile = getTempLocalFile(randomFileName2);    
+      const tempLocalThumbFile = getTempLocalFile(randomFileName3);
+      const optimFilePath      = getNewFilePath(fileDir, OPTIM_PREFIX, fileName);
+      const thumbFilePath      = getNewFilePath(fileDir, THUMB_PREFIX, fileName);
       const bucket             = admin.storage().bucket(object.bucket);
-      // Create the temp directory where the storage file will be downloaded.
-      await mkdirp(tempLocalDir);
-      // Download file from bucket.
-      await bucket.file(filePath).download({destination: tempLocalFile});
-      const imgOptimizationOptions = [
+      const fileRef            = bucket.file(filePath);
+      // Create the temp directory where the storage file will be downloaded
+      await mkdirp(tempLocalDir); 
+
+      await Promise.all([
+        fileRef.makePublic(), // allow the original to be downloaded publicly
+        fileRef.download({destination: tempLocalFile}) // download file from bucket
+      ]);
+
+      // best attempt at a happy medium of size/quality
+      const optimOptions = [
         tempLocalFile,
         '-filter',     'Triangle',
         '-define',     'filter:support=2',
-        '-resize',     '1024>', // max width is 1024px
+        '-resize',     `${OPTIM_MAX_WIDTH}>`, // keeps original aspect ratio
         '-unsharp',    '0.25x0.25+8+0.065',
         '-dither',     'None',
         '-posterize',  '136',
@@ -76,20 +99,48 @@ exports.init = (admin, functions) => {
         '-strip',
         tempLocalOptimFile
       ];
-      // Convert the image to JPEG using ImageMagick.
-      await spawn('convert', imgOptimizationOptions);
-      // console.log('optimized image created at', tempLocalOptimFile);
-      // Uploading the JPEG image.
-      await bucket.upload(tempLocalOptimFile, {
-        destination:    filePath, 
-        predefinedAcl: 'publicRead', 
-        metadata:       newMetadata
-      });
-      // console.log('Done optimizing');
-      // Once the image has been converted delete the local files to free up disk space.
-      fs.unlinkSync(tempLocalOptimFile);
-      fs.unlinkSync(tempLocalFile);
+
+      const thumbOptions = [
+        tempLocalFile, 
+        '-thumbnail', 
+        `${THUMB_MAX_WIDTH}>`, // keeps original aspect ratio
+        tempLocalThumbFile
+      ];
+
+      // Convert the image using ImageMagick.
+      await Promise.all([
+        spawn('convert', optimOptions), 
+        spawn('convert', thumbOptions)
+      ]);
       
+      const newMetadata = {
+        metadata: {
+          'field':         metadata.field,
+          'processed':    'true',
+          'originalSize': `${size}`
+        }
+      };
+
+      // upload new images
+      await Promise.all([
+        bucket.upload(tempLocalOptimFile, {
+          destination:    optimFilePath, 
+          predefinedAcl: 'publicRead', 
+          metadata:       newMetadata
+        }),
+        bucket.upload(tempLocalThumbFile, {
+          destination:    thumbFilePath, 
+          predefinedAcl: 'publicRead', 
+          metadata:       newMetadata
+        })
+      ]);
+
+      // delete the local files to free up disk space
+      fs.unlinkSync(tempLocalOptimFile);
+      fs.unlinkSync(tempLocalThumbFile);
+      fs.unlinkSync(tempLocalFile);  
+
+
       // !!!!!!!!!!!!!!!! Code sample below does not work as of 11/6/2018 !!!!!!!!!!!!!!!!!!!!!!
       //    This would be the perfered best practice way to get a 
       //    new download url for the processed image, but
@@ -109,23 +160,32 @@ exports.init = (admin, functions) => {
       // const [url]      = await file.getSignedUrl(config);
       // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      const url       = `https://storage.googleapis.com/${object.bucket}/${object.name}`; // short term workaround/hack
-      const words     = filePath.split('/');
-      const coll      = words.slice(0, words.length - 2).join('/');
-      const lastWord  = words[words.length - 1];
-      const fileNames = lastWord.split('.');
-      const fileName  = fileNames.slice(0, fileNames.length - 1).join('.');
-      const doc       = words.slice(words.length - 2, words.length - 1)[0];
+
+      const getUrl = path => 
+        `https://storage.googleapis.com/${object.bucket}/${path}`; // short term workaround/hack
+      
+      const words     = fileDir.split('/');
+      const coll      = words.slice(0, words.length - 1).join('/');
+      const doc       = words[words.length - 1];
+      const key       = fileName.split('.')[0];
+      const original  = getUrl(filePath); 
+      const optimized = getUrl(optimFilePath);
+      const thumbnail = getUrl(thumbFilePath);
+
+      // fully dynamic save to firestore doc
       await admin.firestore().collection(coll).doc(doc).set(
         {
-          [metadata.field]: {
-            [fileName]: {
-              url
+          [metadata.field]: { // file-uploader custom element field prop on client
+            [key]: {
+              optimized,
+              original,
+              thumbnail
             }
           }
         }, 
         {merge: true}
       );
+
       return null;
     }
     catch (error) {
