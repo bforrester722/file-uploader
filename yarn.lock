@@ -622,10 +622,10 @@
     "@polymer/iron-iconset-svg" "^3.0.1"
     "@polymer/polymer" "^3.1.0"
 
-"@spriteful/drag-drop-files@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-files/-/drag-drop-files-1.0.4.tgz#608ec45716eda972f454226bd72d04e129dd2aff"
-  integrity sha512-BvZIGvuiJW+wdvyd7cDoCoBRNA95MogqjDHVOixD5G190SAOXQKF2SI/+80F/fJC13C0W4i3w/SFHj07N6hR7w==
+"@spriteful/drag-drop-files@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-files/-/drag-drop-files-1.0.5.tgz#6cbc939190c22d447e7a93fe42164d3c80f27bc7"
+  integrity sha512-a/lkMXtoohpknNIi9qmJRaCagvUo9QeTxnGdEufCB9qS8ILDvDJ9D71SpikWZNBQc3sLwGqICcvN94TOVb/O0g==
   dependencies:
     "@polymer/iron-icon" "^3.0.1"
     "@polymer/paper-icon-button" "^3.0.2"

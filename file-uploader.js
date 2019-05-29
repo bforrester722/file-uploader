@@ -33,6 +33,12 @@
  *
  *  events:
  *
+ *    'data-changed' - fired any time file(s) data changes
+ *                     detail -> {tempUrl, coll, doc, name, ext, type, size, path, field, index}
+ *                                tempUrl - present for images only - window.URL.createObjectURL
+ *                                index   - used for multiple files ordering
+ *
+ *
  *    'file-received' - fired when user starts a file upload process
  *                      detail -> {tempUrl, coll, doc, name, ext, type, size, path, field, index}
  *                                 tempUrl - present for images only - window.URL.createObjectURL
@@ -63,9 +69,8 @@
  *  
  *  methods:
  *
- *    fetch() - returns Promise 
- *              resolves to single obj if multiple is false {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}
- *              resolves to a collection if multiple is true
+ *    getData() - returns file data {[file name]: {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}, ...}
+ *              
  *
  *    delete(name) - name  -> <String> required: file name to target for delete operation
  *                            returns Promise 
@@ -73,7 +78,7 @@
  *
  *    
  *    deleteAll() - returns Promise 
- *                  resolves to [{url, name, ext, type, size, path, field, index <, optimized, thumbnail>}, ...]
+ *                  resolves to {[file name]: {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}, ...}
  *
  *
  *    slots:
@@ -102,7 +107,10 @@ import {
   isDisplayed, 
   listen, 
   message, 
-  schedule
+  schedule,
+  unlisten,
+  wait,
+  warn
 }                 from '@spriteful/utils/utils.js';
 import htmlString from './file-uploader.html';
 import services   from '@spriteful/services/services.js';
@@ -121,16 +129,6 @@ const toLower             = str => str.toLowerCase();
 const removeSpacesAndCaps = compose(trim, split(' '), map(toLower), join(''));
 
 
-const dropIsOverDeleteArea = ({top, right, bottom, left, x, y}) => {
-  if (y < top  || y > bottom) { return false; }
-  if (x < left || x > right)  { return false; }
-  return true;
-};
-
-
-const getFileName = filename => filename.split('.')[0];
-
-
 const formatFileSize = size => {
   if (size < 1024) {
     return `${size}bytes`;
@@ -144,6 +142,37 @@ const formatFileSize = size => {
 };
 
 
+const dropIsOverDeleteArea = ({top, right, bottom, left, x, y}) => {
+  if (y < top  || y > bottom) { return false; }
+  if (x < left || x > right)  { return false; }
+  return true;
+};
+
+
+const nameFromFileName = filename => filename.split('.')[0];
+
+
+const nameFromPath = path => {
+  const words = path.split('/');
+  return nameFromFileName(words[words.length - 1]);
+};
+
+
+const getImageFileDeletePaths = path => {
+  const words     = path.split('/');
+  const base      = words.slice(0, words.length - 1).join('/');
+  const fileName  = words[words.length - 1];
+  const optimPath = `${base}/optim_${fileName}`;
+  const thumbPath = `${base}/thumb_${fileName}`;
+
+  return [
+    path,
+    optimPath,
+    thumbPath
+  ];
+};
+
+
 class FileUploader extends SpritefulElement {
   static get is() { return 'file-uploader'; }
 
@@ -154,16 +183,17 @@ class FileUploader extends SpritefulElement {
 
   static get properties() {
     return {
-
+      // any valid HTML5 input accept string or
+      // one of 3 shorthand values: 'image', 'video' or 'audio'
       accept: {
         type: String,
         value: 'image'
       },
-
+      // firestore collection name
       coll: String,
-
+      // firestore document name
       doc: String,
-
+      // firestore document prop
       field: {
         type: String,
         value: 'images'
@@ -174,6 +204,8 @@ class FileUploader extends SpritefulElement {
         value: false
       },
 
+      _dbData: Object,
+
       _directory: {
         type: String,
         computed: '__computeDirectory(coll, doc)'
@@ -183,30 +215,62 @@ class FileUploader extends SpritefulElement {
 
       _items: {
         type: Array,
-        value: () => ([])
+        computed: '__computeItems(_dbData, field)'
       },
 
       _itemToDelete: Object,
-
-      _itemsUploadData: {
-        type: Object,
-        value: () => ({})
-      },
 
       _newFileNames: {
         type: Object,
         value: () => ({})
       },
-      // used to delete the previous image from storage
-      // when multiple is not truthy
-      _previousItems: {
-        type: Array,
-        value: () => ([])
-      },
 
       _targetToDelete: Object
 
     };
+  }
+
+
+  static get observers() {
+    return [
+      '__collDocFieldChanged(coll, doc, field)'
+    ];
+  }
+
+
+  __computeItems(data) {
+    if (!data) { return; }
+
+    const fileData = data;
+    const keys     = Object.keys(fileData);
+
+    const items = keys.
+      reduce((accum, key) => {
+        const item    = fileData[key];
+        if (item) {          
+          const {index} = item;
+          if (typeof index === 'number') {
+            accum[index] = item;
+          }
+          else {
+            accum = [...accum, item];
+          }
+        }
+        return accum;
+      }, []);
+
+    return items;
+  }
+
+
+  __computeThumbnailSrc(item) {
+    if (!item) { return '#'; }
+
+    const {original, tempUrl, thumbnail} = item;
+
+    if (thumbnail) { return thumbnail; }
+    if (original)  { return original; }
+    return tempUrl;
   }
 
 
@@ -229,13 +293,6 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  __computeThumbnailSrc(item) {
-    if (!item) { return '#'; }
-    const {tempUrl, url} = item;
-    return url ? url : tempUrl;
-  }
-
-
   __computeFileNamePlaceholder(fileName) {
     return fileName.split('.')[0];
   }
@@ -255,59 +312,45 @@ class FileUploader extends SpritefulElement {
     return multiple ? 'File names MUST be unique.' : 'The name MUST be unique.';
   }
 
-
-  async __fetchItemsFromDb() {
-    try {
-      const data = await services.get({coll: this.coll, doc: this.doc});
-      if (!data) { 
-        this._items = [];
-        return;
-      }
-      const images = data.images ? data.images : data;
-      const keys   = Object.keys(images);
-      this._items  = keys.
-        reduce((accum, key) => {
-          const image   = images[key];
-          const {index} = image;
-          if (typeof index === 'number') {
-            accum[index] = image;
-          }
-          else {
-            accum = [...accum, image];
-          }
-          return accum;
-        }, []).
-        filter(obj => obj);
+  // start a subscription to file data changes
+  async __collDocFieldChanged(coll, doc, field) {
+    if (!coll || !doc || !field) { return; }
+    if (this._unsubscribe) {
+      this._unsubscribe();
     }
-    catch (error) {
-      if (error.message) {
-        const text = error.message.split('!')[0];
-        if (text === 'Error: No such document') { return; } // ignore new instances
-      }
-      this.$.spinner.hide();
-      console.error(error);
+    else { 
+      // app is still initializing, 
+      // so give app-settings time to call enablePersistence
+      // on services before calling subscribe
+      await wait(500);
     }
-  }
 
-
-  __handleFileSaved(event) {
-    const {filename, name, path, url} = event.detail;
-    // rename url to tempUrl so as not to overwrite 
-    // the url that is saved after image is processed in the cloud
-    this._itemsUploadData[name] = {
-      filename, 
-      name, 
-      path, 
-      tempUrl: url 
+    const callback = docData => {
+      this._dbData = docData[field];
+      this.fire('data-changed', this._dbData);
     };
+
+    const errorCallback = error => {
+      this._dbData = undefined;
+    };
+
+    this._unsubscribe = services.subscribe({
+      callback,
+      coll,
+      doc,
+      errorCallback
+    });
   }
 
+  // iron-image on-loaded-changed
+  async __handleImageLoadedChanged(event) {
+    const {detail, model}     = event;
+    const {value: loaded}     = detail;
+    const {original, tempUrl} = model.item;
 
-  __handleImageLoadedChanged(event) {
-    const {detail, model} = event;
-    const {value: loaded} = detail;
-    if (loaded) {
-      window.URL.revokeObjectURL(model.item.url);
+    if (loaded && tempUrl && !original) {
+      await schedule();
+      window.URL.revokeObjectURL(tempUrl);
     }
   }
 
@@ -317,23 +360,126 @@ class FileUploader extends SpritefulElement {
     const {name}             = event.model.item;
     this._newFileNames[name] = value;
   }
+  // listen for data changes
+  // resolve the promise when the 
+  // file item has an optimized prop
+  __waitForCloudProcessing(name) {
+    return new Promise(resolve => {
+      listen(this, 'data-changed', (event, key) => {
+        const {optimized} = event.detail[name];
+        if (optimized) { // only present after processing
+          unlisten(key);
+          resolve();
+        }
+      });
+    });    
+  }
 
 
-  __addNewItems(files) {
-    const newItems = files.map(file => ({
-      name:    file.newName,
-      tempUrl: file.tempUrl
-    }));
+  async __delete(name) { 
+    const {optimized, original, path, type} = this._dbData[name];
+    // an image that has been uploaded but not yet optimized
+    if (type && type.includes('image') && original && !optimized) {
+      await this.__waitForCloudProcessing(name);
+    }
+    if (path) {
+      await this.__deleteStorageFiles(path);
+    }
+    return this.__deleteDbFileData(name);
+  }
+
+
+
+  // TODO:
+  //      add index to items based off drag-drop-items sort order
+
+
+  __addIndexes(data) {
+
+    return data;
+
+    // const repeaterElements = this.selectAll('.sortable').
+    //                            filter(el => isDisplayed(el));
+    
+    // const images = repeaterElements.reduce((accum, element, index) => {
+    //   const {name} = element.item;
+    //   accum[name]  = {
+    //     ...element.item, 
+    //     ...this._itemsUploadData[name],
+    //     index
+    //   };
+
+    //   // accum[name]  = Object.assign(
+    //   //   {capture: false, orientation: 0}, 
+    //   //   element.item, 
+    //   //   this._itemsUploadData[name],
+    //   //   {index}
+    //   // );
+
+    //   return accum;
+    // }, {});
+
+    // return images;
+  }
+
+
+
+  __saveFileData(obj = {}) {
+    const data = this._dbData ? 
+                   {...this._dbData, ...obj} : // merge with existing data
+                   obj; // set new data
+
+    const orderedData = this.__addIndexes(data);
+    
+    return services.set({
+      coll: this.coll,
+      doc:  this.doc,
+      data: {
+        [this.field]: orderedData
+      }
+    });
+  }
+
+
+  async __addNewItems(files) {
+    const newItems = files.reduce((accum, file) => {
+      const {name, newName, size, tempUrl, type} = file;
+      const sizeStr = formatFileSize(size);
+      const words   = name.split('.');
+      const ext     = words[words.length - 1];
+      accum[newName] = {
+        coll:     this.coll,
+        doc:      this.doc,
+        ext,
+        field:    this.field,
+        filename: name, 
+        name:     newName, 
+        size, 
+        sizeStr,
+        tempUrl, 
+        type
+      };
+      return accum;
+    }, {});
+
     if (!this.multiple) {
-      // store previous images so they may be cleaned up
-      // from storage and db
-      const previous = this._items[this._items.length - 1];
-      this._previousItems.push(previous);
-      this._items = newItems;
+      // delete previous file and its data
+      if (this._items && this._items.length) {
+        const {name} = this._items[this._items.length - 1];
+        await this.__delete(name);        
+      }
     }
-    else {
-      this.push('_items', ...newItems);
-    }
+
+    this.__saveFileData(newItems);
+  }
+
+
+  __handleFileSaved(event) {
+    const {name, original, path} = event.detail;
+
+    this.__saveFileData({
+      [name]: {...this._dbData[name], original, path} // merge with existing file data
+    });
   }
 
 
@@ -345,7 +491,7 @@ class FileUploader extends SpritefulElement {
           file.newName = this._newFileNames[file.name];
         }
         else {
-          file.newName = getFileName(file.name);
+          file.newName = nameFromFileName(file.name);
         }
         return file;
       });
@@ -367,7 +513,7 @@ class FileUploader extends SpritefulElement {
     try {
       await this.clicked();
       const files = this._filesToRename.map(file => {
-        file.newName = getFileName(file.name);
+        file.newName = nameFromFileName(file.name);
         return file;
       });
       this.__addNewItems(files);
@@ -385,25 +531,19 @@ class FileUploader extends SpritefulElement {
 
 
   async __handleFilesAdded(event) {
-    const {files}       = event.detail;
+    const {files} = event.detail;
+    // drives modal repeater       
     this._filesToRename = files.map(file => {
-      file.tempUrl = window.URL.createObjectURL(file);
+      if (file.type.includes('image')) { 
+        file.tempUrl = window.URL.createObjectURL(file);
+      }
       return file;
     });
     await schedule();
     this.$.renameFilesModal.open();
   }
 
-
-  __deleteImageFromDb(name) {
-    return services.deleteField({
-      coll:   this.coll, 
-      doc:    this.doc, 
-      field: `${this.field}.${name}`
-    });
-  }
-
-  // fake deleting the element to play nicely with spriteful-drag-drop-list
+  // fake deleting the element to play nicely with drag-drop-list
   __hideSortableElement(name) {
     const elements = this.selectAll('.sortable');
     const element  = elements.find(element => 
@@ -417,23 +557,11 @@ class FileUploader extends SpritefulElement {
   // from file upload progress 'X' button
   async __handleFileRemoved(event) {
     try {
-      await this.$.spinner.show('Deleting item data...');      
+      await this.$.spinner.show('Deleting file data...');      
       const {name}  = event.detail;
       const element = this.__hideSortableElement(name);
       if (!element) { return; }
-      const previousPath = element.item.path;
-      const recentPath   = this._itemsUploadData[name] ? 
-                             this._itemsUploadData[name].path : 
-                             undefined;     
-      delete this._itemsUploadData[name];
-
-      if (previousPath) {
-        await services.deleteFile(previousPath);
-      }
-      if (recentPath) {
-        await services.deleteFile(recentPath);
-      }
-      await this.__deleteImageFromDb(name);
+      await this.__delete(name);
     }
     catch (error) {
       console.error(error);
@@ -444,6 +572,10 @@ class FileUploader extends SpritefulElement {
   }
 
 
+  // TODO:
+  //      update _dbData indexes
+
+
   __handleSortFinished() {
     if (this._itemToDelete) {
       this._targetToDelete.style.opacity = '0';
@@ -451,33 +583,46 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  __getDeletePath(name, path) {
-    if (path) {
-      return path;
+  __deleteStorageFiles(path) {
+    // lookup the file data item using path and get its type
+    const {type} = 
+      Object.values(this._dbData).find(obj => 
+        obj.path === path);
+    // test the file type, 
+    // if its an image, 
+    // then delete the optim_ and 
+    // thumb_ files from storage as well
+    if (type.includes('image')) {
+      const paths    = getImageFileDeletePaths(path);
+      const promises = paths.map(path => services.deleteFile(path));
+      return Promise.all(promises);
     }
-    if (this._itemsUploadData[name]) {
-      return this._itemsUploadData[name].path;
-    }
+
+    return services.deleteFile(path);
+  }
+
+
+  __deleteDbFileData(name) {
+    return services.deleteField({
+      coll:   this.coll, 
+      doc:    this.doc, 
+      field: `${this.field}.${name}`
+    });
   }
 
   // drag-drop delete area modal
   async __confirmDeleteButtonClicked() {
     try {
       await this.clicked();
-      const files        = this.$.fileDropZone.getFiles();
-      const fileToDelete = files.find(file => 
-        file.newName === this._itemToDelete.name);
+      await this.$.spinner.show('Deleting file data...');
+      const files  = this.$.fileDropZone.getFiles();
+      const {name} = this._itemToDelete;
+      const fileToDelete = files.find(file => file.newName === name);
       if (fileToDelete) { // cancel upload and remove file from dropzone list
         this.$.fileDropZone.removeFile(fileToDelete);
-      }
-      const {name, path} = this._itemToDelete;
-      const deletePath   = this.__getDeletePath(name, path);
-      if (deletePath) {
-        await this.$.spinner.show('Deleting file...');
-        delete this._itemsUploadData[name];
-        await this.__deleteImageFromDb(name);
-        await services.deleteFile(deletePath);
-      }
+      }       
+      await this.$.deleteConfirmModal.close();     
+      await this.__delete(name);
     }
     catch (error) {
       if (error === 'click disabled') { return; }
@@ -486,7 +631,6 @@ class FileUploader extends SpritefulElement {
     finally {
       this.__hideSortableElement(this._itemToDelete.name);
       this._targetToDelete.style.opacity = '1';
-      await this.$.deleteConfirmModal.close();
       this._targetToDelete = undefined;
       this._itemToDelete   = undefined;
       this.$.spinner.hide();
@@ -529,88 +673,19 @@ class FileUploader extends SpritefulElement {
     }
   }
 
-  // ignore errors since the item may already have been deleted
-  async __safeDeleteFile(path) {
+
+  async delete(name) {
+    if (!name) { 
+      throw new Error('file-uploader delete method must have a name argument present.'); 
+    }
+
     try {
-      await services.deleteFile(path);
-    }
-    catch (error) {
-      console.warn('__safeDeleteFile maybe already deleted: ', path, ' error: ', error);
-    }
-    finally {
-      return path;
-    }
-  }
-
-  // ignore errors since the item may already have been deleted
-  async __safeDeleteImgFromDb(name) {
-    try {
-      await this.__deleteImageFromDb(name);
-    }
-    catch (error) {
-      console.warn('__safeDeleteImgFromDb maybe already deleted: ', name, ' error: ', error);
-    }
-    finally {
-      return name;
-    }
-  }
-
-
-  __cleanupOldUploads() {
-    if (this.multiple) { return; }
-    if (!this._previousItems.length) { return; }
-    const noNewItems = this._previousItems.filter(item => 
-      item && item.path);
-    const filePromises = noNewItems.map(item => 
-      this.__safeDeleteFile(item.path));
-    const fieldPromises = noNewItems.map(item => 
-      this.__safeDeleteImgFromDb(item.name));
-    return Promise.all([...filePromises, ...fieldPromises]);
-  }
-
-
-  async init() {
-    if (!this.doc) { return; }
-    if (this._items.length) { return; }
-    await this.$.spinner.show('Loading data...');
-    // this.$.container.style.opacity = '1';
-    await this.__fetchItemsFromDb();
-    return this.$.spinner.hide();
-  }
-
-
-  getImages() {
-    // build an array with upload data and the resorted index
-    // based on how they show up in the drag and drop list
-    const repeaterElements = this.selectAll('.sortable').
-                               filter(el => isDisplayed(el));
-    // cannot create an array, must be object for deleting by name
-    const images = repeaterElements.reduce((accum, element, index) => {
-      const {name} = element.item;
-      accum[name]  = Object.assign(
-        {capture: false, orientation: 0}, 
-        element.item, 
-        this._itemsUploadData[name],
-        {index}
-      );
-      return accum;
-    }, {});
-
-    return images;
-  }
-
-
-  async deleteImage(name, path) {
-    try {
-      const deletePath = this.__getDeletePath(name, path);
-      if (deletePath) {
-        await this.$.spinner.show('Deleting file...');
-        delete this._itemsUploadData[name];
-        await services.deleteFile(deletePath);        
-      }
+      await this.$.spinner.show('Deleting file data...');
+      await this.__delete(name);
     }
     catch (error) {
       console.error(error);
+      await warn('Sorry, an error occured while trying to delete the file!');
     }
     finally {
       return this.$.spinner.hide();
@@ -618,42 +693,26 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  async reset() { 
-    await this.__cleanupOldUploads();
-    this.$.fileDropZone.reset();
-    this._items         = [];
-    this._previousItems = [];
-    return this.init();
-  }
-
-
-  __invalidPropError(str) {
-    throw new Error(`file-uploader must have a valid ${str} property set`);
-  }
-
-
-  async fetch() {
-    if (!this.coll) {
-      this.__invalidPropError('coll');
-    }
-    if (!this.doc) {
-      this.__invalidPropError('doc');
-    }
-    if (!this.field) {
-      this.__invalidPropError('field');
-    }
-
-    return this.reset();
-  }
-
-
-  async delete(name) {
-
-  }
-
-
   async deleteAll() {
+    try {
+      await this.$.spinner.show('Deleting file data...');
+      const names    = Object.keys(this._dbData);
+      const promises = names.map(name => this.__delete(name));
+      await Promise.all(promises);
+      this.$.fileDropZone.reset();
+    }
+    catch (error) {
+      console.error(error);
+      await warn('Sorry, an error occured while trying to delete the files!');
+    }
+    finally {
+      return this.$.spinner.hide();
+    }
+  }
 
+
+  getData() {
+    return this._dbData;
   }
 
 }

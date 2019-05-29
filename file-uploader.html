@@ -136,6 +136,11 @@
               items="[[_items]]">
       <div class="sortable" 
            item="[[item]]">
+
+
+
+        <!-- TODO: hide iron-image for non image/video files. show icon placeholder -->
+
         <iron-image class="list-images"
                     src$="[[__computeThumbnailSrc(item)]]" 
                     fade 
@@ -143,6 +148,10 @@
                     sizing="contain"
                     on-loaded-changed="__handleImageLoadedChanged">
         </iron-image>
+
+
+
+
         <div class="list-names">[[item.name]]</div>
       </div>
     </template>
