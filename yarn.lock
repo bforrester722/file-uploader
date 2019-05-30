@@ -650,6 +650,16 @@
   resolved "https://registry.yarnpkg.com/@spriteful/lambda/-/lambda-1.3.9.tgz#c9d82ab82e4b9a99897bff5b5e219c3fcca1699d"
   integrity sha512-14gisc0Ng7u/9TZD8+aX76/uedau9CRpjK47C5XEtZm4tmDR/kvaJ7FS9tl9OP4BAwmqwfULNPFhoEVLRIXOew==
 
+"@spriteful/lazy-video@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@spriteful/lazy-video/-/lazy-video-1.0.0.tgz#fa2ed0cb552a38cda3f97abb3a17b457390ed3e9"
+  integrity sha512-lzIGAoCdY5N3RaclaSGdz5Ig/cFeA9oWSiSuvQL/vG4v4+o/HziqS7qYT9bmOT461dTkMoDbydK2VIX3J8Wx+w==
+  dependencies:
+    "@polymer/polymer" "^3.1.0"
+    "@spriteful/app-spinner" "^1.0.0"
+    "@spriteful/spriteful-element" "^1.0.4"
+    "@spriteful/utils" "^1.1.6"
+
 "@spriteful/overlay-mixin@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@spriteful/overlay-mixin/-/overlay-mixin-1.0.0.tgz#fa6d416a1d446a51cd3fa24bb9fae6674fbe4fa0"
