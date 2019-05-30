@@ -121,6 +121,7 @@ import '@spriteful/cms-icons/cms-icons.js';
 import '@spriteful/drag-drop-list/drag-drop-list.js';
 import '@spriteful/drag-drop-files/drag-drop-files.js';
 import '@spriteful/lazy-video/lazy-video.js';
+import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-image/iron-image.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-input/paper-input.js';
