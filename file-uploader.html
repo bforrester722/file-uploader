@@ -8,6 +8,10 @@
     background-color:             var(--app-background-color);
     --drop-zone-background-color: var(--app-light-color);
   }
+
+  *[hidden] {
+    display: none;
+  }
   
   drag-drop-list {
     display:        flex;
@@ -24,7 +28,7 @@
     background-color: black;
   }
 
-  .list-images {
+  .list-items {
     width:            20vmax;
     min-width:        128px;
     min-height:       128px;
@@ -32,7 +36,7 @@
     transition:       transform 0.2s ease-out;
   }
 
-  .list-images:hover {
+  .list-items:hover {
     transform: scale(1.1, 1.1);
   }
 
@@ -68,7 +72,7 @@
     background-color: var(--app-disabled-color);
   }
 
-  iron-icon {
+  #delete-icon {
     width:  40px;
     height: 40px;
   }
@@ -132,7 +136,8 @@
                   sortable=".sortable" 
                   on-item-dropped="__handleDeleteDrop" 
                   on-sort-finish="__handleSortFinished">
-    <template is="dom-repeat" 
+    <template id="sortListRepeater" 
+              is="dom-repeat" 
               items="[[_items]]">
       <div class="sortable" 
            item="[[item]]">
@@ -141,13 +146,25 @@
 
         <!-- TODO: hide iron-image for non image/video files. show icon placeholder -->
 
-        <iron-image class="list-images"
-                    src$="[[__computeThumbnailSrc(item)]]" 
+        <iron-image class="list-items"
+                    hidden="[[__computeIronImageHidden(item)]]"
+                    src="[[__computeThumbnailSrc(item)]]" 
                     fade 
                     preload 
                     sizing="contain"
                     on-loaded-changed="__handleImageLoadedChanged">
         </iron-image>
+
+
+        <iron-icon class="list-items" 
+                   hidden="[[__computeIronIconHidden(item)]]"
+                   icon="cms-icons:audio">
+        </iron-icon>
+
+        <lazy-video class="list-items" 
+                    hidden="[[__computeLazyVideoHidden(item)]]" 
+                    src="[[item.original]]">
+        </lazy-video>
 
 
 
@@ -160,7 +177,9 @@
   <div id="max-width-container">
     <div id="deleteArea" 
          class="max-width">
-      <iron-icon icon="app-icons:delete-forever"></iron-icon>
+      <iron-icon id="delete-icon" 
+                 icon="app-icons:delete-forever">
+      </iron-icon>
       <div>Drop file here to delete</div>
     </div>
     <drag-drop-files id="fileDropZone"
@@ -216,7 +235,7 @@
     <template is="dom-repeat" items="[[_filesToRename]]">
       <div class="file-name-inputs">
         <iron-image class="rename-modal-images"
-                    src$="[[item.tempUrl]]" 
+                    src$="[[item._tempUrl]]" 
                     fade 
                     preload 
                     sizing="contain">

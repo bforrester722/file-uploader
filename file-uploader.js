@@ -34,14 +34,14 @@
  *  events:
  *
  *    'data-changed' - fired any time file(s) data changes
- *                     detail -> {tempUrl, coll, doc, name, ext, type, size, path, field, index}
- *                                tempUrl - present for images only - window.URL.createObjectURL
+ *                     detail -> {_tempUrl, coll, doc, name, ext, type, size, path, field, index}
+ *                                _tempUrl - present for images only - window.URL.createObjectURL
  *                                index   - used for multiple files ordering
  *
  *
  *    'file-received' - fired when user starts a file upload process
- *                      detail -> {tempUrl, coll, doc, name, ext, type, size, path, field, index}
- *                                 tempUrl - present for images only - window.URL.createObjectURL
+ *                      detail -> {_tempUrl, coll, doc, name, ext, type, size, path, field, index}
+ *                                 _tempUrl - present for images only - window.URL.createObjectURL
  *                                 index   - used for multiple files ordering
  *
  *  
@@ -117,8 +117,10 @@ import services   from '@spriteful/services/services.js';
 import '@spriteful/app-icons/app-icons.js';
 import '@spriteful/app-modal/app-modal.js';
 import '@spriteful/app-spinner/app-spinner.js';
+import '@spriteful/cms-icons/cms-icons.js';
 import '@spriteful/drag-drop-list/drag-drop-list.js';
 import '@spriteful/drag-drop-files/drag-drop-files.js';
+import '@spriteful/lazy-video/lazy-video.js';
 import '@polymer/iron-image/iron-image.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-input/paper-input.js';
@@ -170,6 +172,14 @@ const getImageFileDeletePaths = path => {
     optimPath,
     thumbPath
   ];
+};
+
+
+const collectionToDataObj = collection => {
+  return collection.reduce((accum, obj) => {
+    accum[obj.name] = obj;
+    return accum;
+  }, {});
 };
 
 
@@ -241,12 +251,11 @@ class FileUploader extends SpritefulElement {
   __computeItems(data) {
     if (!data) { return; }
 
-    const fileData = data;
-    const keys     = Object.keys(fileData);
+    const keys = Object.keys(data);
 
     const items = keys.
       reduce((accum, key) => {
-        const item    = fileData[key];
+        const item = data[key];
         if (item) {          
           const {index} = item;
           if (typeof index === 'number') {
@@ -266,11 +275,11 @@ class FileUploader extends SpritefulElement {
   __computeThumbnailSrc(item) {
     if (!item) { return '#'; }
 
-    const {original, tempUrl, thumbnail} = item;
+    const {original, _tempUrl, thumbnail} = item;
 
     if (thumbnail) { return thumbnail; }
     if (original)  { return original; }
-    return tempUrl;
+    return _tempUrl;
   }
 
 
@@ -290,6 +299,24 @@ class FileUploader extends SpritefulElement {
 
   __computeListClass(multiple) {
     return multiple ? '' : 'center-list';
+  }
+
+
+  __computeIronImageHidden(item) {
+    if (!item || !item.type) { return true; }
+    return !item.type.includes('image');
+  }
+
+
+  __computeIronIconHidden(item) {
+    if (!item || !item.type) { return true; }
+    return !item.type.includes('audio');
+  }
+
+
+  __computeLazyVideoHidden(item) {    
+    if (!item || !item.type) { return true; }
+    return !item.type.includes('video');
   }
 
 
@@ -325,7 +352,9 @@ class FileUploader extends SpritefulElement {
       await wait(500);
     }
 
-    const callback = docData => {
+    const callback = async docData => {
+      this._dbData = undefined; // force template to restamp
+      await schedule();         // force template to restamp
       this._dbData = docData[field];
       this.fire('data-changed', this._dbData);
     };
@@ -344,13 +373,14 @@ class FileUploader extends SpritefulElement {
 
   // iron-image on-loaded-changed
   async __handleImageLoadedChanged(event) {
-    const {detail, model}     = event;
-    const {value: loaded}     = detail;
-    const {original, tempUrl} = model.item;
+    const {detail, model} = event;
+    if (!model.item) { return; }
+    const {value: loaded}      = detail;
+    const {original, _tempUrl} = model.item;
 
-    if (loaded && tempUrl && !original) {
+    if (loaded && _tempUrl && !original) {
       await schedule();
-      window.URL.revokeObjectURL(tempUrl);
+      window.URL.revokeObjectURL(_tempUrl);
     }
   }
 
@@ -388,40 +418,40 @@ class FileUploader extends SpritefulElement {
     return this.__deleteDbFileData(name);
   }
 
-
-
-  // TODO:
-  //      add index to items based off drag-drop-items sort order
-
-
+  // update index props based on the drag-drop-list order
   __addIndexes(data) {
+    // drag-drop-list elements
+    const sortedItems = this.selectAll('.sortable').
+                          filter(el => isDisplayed(el)).
+                          map(el => el.item);
 
-    return data;
-
-    // const repeaterElements = this.selectAll('.sortable').
-    //                            filter(el => isDisplayed(el));
-    
-    // const images = repeaterElements.reduce((accum, element, index) => {
-    //   const {name} = element.item;
-    //   accum[name]  = {
-    //     ...element.item, 
-    //     ...this._itemsUploadData[name],
-    //     index
-    //   };
-
-    //   // accum[name]  = Object.assign(
-    //   //   {capture: false, orientation: 0}, 
-    //   //   element.item, 
-    //   //   this._itemsUploadData[name],
-    //   //   {index}
-    //   // );
-
-    //   return accum;
-    // }, {});
-
-    // return images;
+    const keys = Object.keys(data);
+    // use the position in the sortedItems array as new index
+    const indexedData = keys.map(key => {
+      const obj   = data[key];
+      const index = sortedItems.findIndex(item => 
+                      item.name === obj.name);
+      return {...obj, index};
+    });
+    // current items data
+    const sorted   = indexedData.filter(obj => obj.index > -1);
+    // new items data
+    const unsorted = indexedData.filter(obj => obj.index === -1);
+    // add initial indexes for new data starting 
+    // where the current data leaves off
+    const startIndex     = sorted.length;
+    const orderedNewData = unsorted.map((obj, index) => {
+      const newIndex = startIndex + index;
+      return {...obj, index: newIndex};
+    });
+    // merge current and new data
+    const ordered = [...sorted, ...orderedNewData];
+    // from array back to a data obj
+    return ordered.reduce((accum, obj) => {
+      accum[obj.name] = obj;
+      return accum;
+    }, {});
   }
-
 
 
   __saveFileData(obj = {}) {
@@ -443,7 +473,7 @@ class FileUploader extends SpritefulElement {
 
   async __addNewItems(files) {
     const newItems = files.reduce((accum, file) => {
-      const {name, newName, size, tempUrl, type} = file;
+      const {name, newName, size, _tempUrl = null, type} = file;
       const sizeStr = formatFileSize(size);
       const words   = name.split('.');
       const ext     = words[words.length - 1];
@@ -456,7 +486,7 @@ class FileUploader extends SpritefulElement {
         name:     newName, 
         size, 
         sizeStr,
-        tempUrl, 
+        _tempUrl, 
         type
       };
       return accum;
@@ -535,7 +565,7 @@ class FileUploader extends SpritefulElement {
     // drives modal repeater       
     this._filesToRename = files.map(file => {
       if (file.type.includes('image')) { 
-        file.tempUrl = window.URL.createObjectURL(file);
+        file._tempUrl = window.URL.createObjectURL(file);
       }
       return file;
     });
@@ -543,11 +573,19 @@ class FileUploader extends SpritefulElement {
     this.$.renameFilesModal.open();
   }
 
+
+  __handleSortFinished() {
+    if (this._itemToDelete) {
+      this._targetToDelete.style.opacity = '0';
+    }
+    this.__saveFileData(); // save new indexes after resort
+  }
+
   // fake deleting the element to play nicely with drag-drop-list
   __hideSortableElement(name) {
     const elements = this.selectAll('.sortable');
     const element  = elements.find(element => 
-      element.item.name === name);
+      element.item && element.item.name === name);
     if (!element) { return; }
     element.classList.remove('sortable');
     element.style.display = 'none';
@@ -572,17 +610,6 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  // TODO:
-  //      update _dbData indexes
-
-
-  __handleSortFinished() {
-    if (this._itemToDelete) {
-      this._targetToDelete.style.opacity = '0';
-    }
-  }
-
-
   __deleteStorageFiles(path) {
     // lookup the file data item using path and get its type
     const {type} = 
@@ -592,7 +619,7 @@ class FileUploader extends SpritefulElement {
     // if its an image, 
     // then delete the optim_ and 
     // thumb_ files from storage as well
-    if (type.includes('image')) {
+    if (type && type.includes('image')) {
       const paths    = getImageFileDeletePaths(path);
       const promises = paths.map(path => services.deleteFile(path));
       return Promise.all(promises);
