@@ -1,6 +1,6 @@
 {
   "name": "@spriteful/file-uploader",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Accepts files from user and handles uploading/optimization/deleting/previewing/rearranging",
   "main": "file-uploader.js",
   "scripts": {
