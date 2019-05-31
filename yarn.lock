@@ -622,21 +622,6 @@
     "@polymer/iron-iconset-svg" "^3.0.1"
     "@polymer/polymer" "^3.1.0"
 
-"@spriteful/drag-drop-files@^1.0.6":
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-files/-/drag-drop-files-1.0.6.tgz#068fceb865732c9269b9a7819c3e9ada3cd00105"
-  integrity sha512-d6CCn7S5zj6x3pKJsRLTva0pDheK0M9wSRRxeWtVE4NCmizTgaVCnDTrFBjJvPO0nwiKzvpBqRpAYOG/dKk1qw==
-  dependencies:
-    "@polymer/iron-icon" "^3.0.1"
-    "@polymer/paper-icon-button" "^3.0.2"
-    "@polymer/paper-progress" "^3.0.1"
-    "@polymer/polymer" "^3.2.0"
-    "@spriteful/app-icons" "^1.0.6"
-    "@spriteful/cms-icons" "^1.0.1"
-    "@spriteful/services" "^2.1.7"
-    "@spriteful/spriteful-element" "^1.0.4"
-    "@spriteful/utils" "^1.2.4"
-
 "@spriteful/drag-drop-list@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-list/-/drag-drop-list-1.0.0.tgz#da11146172a6aeeb1a86cf68941a00a0f08e94f9"
@@ -650,15 +635,15 @@
   resolved "https://registry.yarnpkg.com/@spriteful/lambda/-/lambda-1.3.9.tgz#c9d82ab82e4b9a99897bff5b5e219c3fcca1699d"
   integrity sha512-14gisc0Ng7u/9TZD8+aX76/uedau9CRpjK47C5XEtZm4tmDR/kvaJ7FS9tl9OP4BAwmqwfULNPFhoEVLRIXOew==
 
-"@spriteful/lazy-video@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@spriteful/lazy-video/-/lazy-video-1.0.0.tgz#fa2ed0cb552a38cda3f97abb3a17b457390ed3e9"
-  integrity sha512-lzIGAoCdY5N3RaclaSGdz5Ig/cFeA9oWSiSuvQL/vG4v4+o/HziqS7qYT9bmOT461dTkMoDbydK2VIX3J8Wx+w==
+"@spriteful/lazy-video@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@spriteful/lazy-video/-/lazy-video-1.0.1.tgz#cb4db3c3059f981e03e36be8ffe6f42e7a716e8c"
+  integrity sha512-5xnAKex4Wq78WhAuVFqZAiewIgWupqWV4Lg4cuUFHa5Fmgur18Cfpoi/cjV7Vd91IzX/Z7MehrxwCvF1InRu3g==
   dependencies:
-    "@polymer/polymer" "^3.1.0"
+    "@polymer/polymer" "^3.2.0"
     "@spriteful/app-spinner" "^1.0.0"
     "@spriteful/spriteful-element" "^1.0.4"
-    "@spriteful/utils" "^1.1.6"
+    "@spriteful/utils" "^1.2.4"
 
 "@spriteful/overlay-mixin@^1.0.0":
   version "1.0.0"

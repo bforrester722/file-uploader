@@ -1,0 +1,66 @@
+
+<style>
+
+  :host {
+    @apply --bottom-divider-mixin;
+    display:               grid;
+    grid-template-columns: 1fr min-content;
+    gap:                   8px;
+    padding:               8px 0px;
+    background-color:      var(--app-background-color);
+  }
+
+  .static-height {
+    height: 40px;
+  }
+
+  .secondary {
+    font-size: 14px;
+    color:     var(--secondary-text-color);
+  }
+
+  #control-buttons {
+    position: relative;
+    height:   40px;
+    width:    40px;
+  }
+
+  .control-button {
+    display:  block;
+    position: absolute;
+    top:      0px;
+    left:     0px;
+  }
+
+</style>
+
+
+<div class="static-height">
+  <div>[[file.newName]]</div>
+  <div class="secondary">[[file.type]]</div>
+</div>
+<div>
+  <paper-icon-button hidden="[[_hideControlBtns]]"
+                     icon="app-icons:close" 
+                     alt="Remove file" 
+                     on-click="__removeFileButtonClicked">
+  </paper-icon-button>
+</div>
+<div class="static-height">
+  <div class="secondary">[[_state]]</div>
+  <paper-progress value="[[_progress]]"></paper-progress>
+</div>
+<div id="control-buttons" hidden="[[_hideControlBtns]]">
+  <paper-icon-button class="control-button"
+                     hidden="[[_paused]]"
+                     icon="app-icons:pause" 
+                     alt="Pause file upload" 
+                     on-click="__pauseUploadButtonClicked">
+  </paper-icon-button>
+  <paper-icon-button class="control-button"
+                     hidden="[[!_paused]]"
+                     icon="app-icons:play-arrow" 
+                     alt="Resume file upload" 
+                     on-click="__resumeUploadButtonClicked">
+  </paper-icon-button>
+</div>
