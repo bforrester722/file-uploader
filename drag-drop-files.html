@@ -1,0 +1,132 @@
+
+<style>
+
+  :host {
+    display: block;
+  }
+
+  :host([disabled]) {
+    cursor: not-allowed;
+  }
+
+  #droparea {
+    display:        flex;
+    flex-direction: column;
+    padding:        16px;
+    text-align:     center;
+    cursor:         pointer;
+    color:          var(--yo-file-color, var(--paper-grey-600));
+    border:         4px dashed var(--yo-file-color, var(--paper-grey-600));
+  }
+
+  :host([disabled]) #droparea {
+    pointer-events:  none;
+    text-decoration: line-through;
+    color:           var(--yo-file-disabled-color, var(--paper-grey-400));
+    border-color:    var(--yo-file-disabled-color, var(--paper-grey-400));
+  }
+
+  #droparea:hover {
+    color:            var(--yo-file-hover-color, var(--paper-grey-600));
+    border-color:     var(--yo-file-hover-color, var(--paper-grey-600));
+    background-color: var(--yo-file-hover-bgcolor, var(--paper-grey-50));
+  }
+
+  #droparea.highlight {
+    color:            var(--yo-file-active-color, var(--paper-indigo-600));
+    border-color:     var(--yo-file-active-color, var(--paper-indigo-600));
+    background-color: var(--yo-file-active-bgcolor, var(--paper-indigo-50));
+  }
+
+  #droparea.hidden {
+    display: none;
+  }
+
+  .icon {
+    margin: auto;
+    height: var(--yo-file-icon-height, 40px);
+    width:  var(--yo-file-icon-width, 40px);
+  }
+
+  #input {
+    display: none;
+  }
+
+  .feedback {
+    font-weight: bold;
+    color:       var(--yo-file-feedback-color, var(--paper-red-600));
+  }
+
+  .listbox.single:hover {
+    cursor:           pointer;
+    background-color: var(--yo-file-hover-bgcolor, var(--paper-grey-50));
+  }
+
+  .listbox > .label {
+    padding-top: .5em;
+    display:      none;
+  }
+
+  .listbox.single > .label {
+    display:    block;
+    text-align: center;
+    color:      var(--yo-file-color, var(--paper-grey-600));
+    font-size: .9em;
+  }
+
+  .item {
+    display: none;
+  }
+
+  .displayed {
+    display: grid;
+  }
+
+  .slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  @keyframes slide-up {
+
+    0% {
+      transform: translateY(0px);
+    }
+    100% {
+      transform: translateY(-111px);
+    }
+
+  }
+
+</style>
+
+
+<label for="input" id="droparea">
+  <iron-icon class="icon" 
+             icon="app-icons:file-upload">
+  </iron-icon>
+  <input type="file" 
+         id="input" 
+         multiple$="[[multiple]]" 
+         accept$="[[accept]]">
+  <span class="label">[[label]]</span>
+  <span class="feedback">[[feedbackText]]</span>
+</label>
+
+<div id="listbox" class="listbox" role="listbox">
+  <div class="label">
+    <span>[[label]]</span>
+    <span class="feedback">[[feedbackText]]</span>
+  </div>
+  <template is="dom-repeat" items="[[_items]]">
+    <file-item class="item displayed" 
+               directory="[[directory]]"
+               file="[[item.file]]"
+               index="[[index]]"
+               metadata="[[_metadata]]"
+               on-remove-file="__removeFile"
+               on-click="__fileItemClicked"
+               on-upload-complete="__fileUploadComplete"
+               on-animationend="__itemAnimationEnd">
+    </file-item>
+  </template>
+</div>

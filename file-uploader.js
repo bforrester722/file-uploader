@@ -1,10 +1,11 @@
 /**
  * `file-uploader`
  * 
- *  Accepts files from user and handles uploading/optimization/deleting/previewing/rearranging
+ *  Accepts files from user and handles uploading/saving/optimization/deleting/previewing/rearranging
  *
  *
  *  properites:
+ *
  *
  *    accept - <String> optional: file type to allow from user. 
  *             ie. 'audio', 'video', 'audio,.jpg', '.doc', ... 
@@ -33,60 +34,48 @@
  *
  *  events:
  *
+ *
  *    'data-changed' - fired any time file(s) data changes
- *                     detail -> {_tempUrl, coll, doc, name, ext, type, size, path, field, index}
- *                                _tempUrl - present for images only - window.URL.createObjectURL
- *                                index   - used for multiple files ordering
+ *                     detail -> {[name]: {coll, doc, ext, field, filename, index, name, path, size, sizeStr, type, _tempUrl <, optimized, original, thumbnail>}, ...}
+ *                                _tempUrl - window.URL.createObjectURL
+ *                                index    - used for multiple files ordering
  *
  *
- *    'file-received' - fired when user starts a file upload process
- *                      detail -> {_tempUrl, coll, doc, name, ext, type, size, path, field, index}
- *                                 _tempUrl - present for images only - window.URL.createObjectURL
- *                                 index   - used for multiple files ordering
+ *    'file-received' - fired after user interacts with renameFileModal and before the file upload process begins
+ *                      detail -> {name, newName, size, type <, _tempUrl>}
+ *                                 name     - will become 'filename' (name.ext)
+ *                                 newName  - will become unique 'name' key
+ *                                 _tempUrl - window.URL.createObjectURL
  *
  *  
  *    'file-uploaded' - fired after successful upload operation
- *                      detail -> {url, coll, doc, name, ext, type, size, path, field, index}
- *                                 index - used for multiple files ordering
- *                                 url   - public download url for full size original
- *
- *
- *    'file-optimized' - image files only - fired after optimization cloud function has finished processing image
- *                       detail -> {optimized, thumbnail, url, coll, doc, name, ext, type, size, path, field, index}
- *                                 optimized - public download url for processed and resized file (1024px max width)
- *                                 thumbnail - public download url for processed and resized file (256px wide)
- *                                 url       - public download url for full size original
+ *                      detail -> {coll, doc, ext, field, filename, name, original, path, size, sizeStr, type, _tempUrl}
+ *                                 original - public download url for full size original
  *
  *
  *    'file-deleted' - fired after user deletes a file
- *                     detail -> {url, coll, doc, name, ext, type, size, path, field, index <, optimized, thumbnail>}
+ *                     detail -> {coll, doc, ext, field, filename, index, name, path, size, sizeStr, type, _tempUrl <, optimized, original, thumbnail>}
  *
  *     
  *    'upload-cancelled' - fired if user cancels the upload process
- *                         detail -> {url, coll, doc, name, ext, type, size, path, field, index <, optimized, thumbnail>}          
+ *                         detail -> {coll, doc, ext, field, filename, index, name, path, size, sizeStr, type, _tempUrl}          
  *
  *
  *  
  *  methods:
  *
- *    getData() - returns file data {[file name]: {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}, ...}
+ *
+ *    getData() - returns file data {[name]: {coll, doc, ext, field, filename, index, name, path, size, sizeStr, type, _tempUrl <, optimized, original, thumbnail>}, ...}
  *              
  *
  *    delete(name) - name  -> <String> required: file name to target for delete operation
  *                            returns Promise 
- *                            resolves to {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}
+ *                            resolves to {coll, doc, ext, field, filename, index, name, path, size, sizeStr, type, _tempUrl <, optimized, original, thumbnail>}
  *
  *    
- *    deleteAll() - returns Promise 
- *                  resolves to {[file name]: {url, name, ext, type, size, path, field, index <, optimized, thumbnail>}, ...}
+ *    deleteAll() - returns Promise that resolves when deletion finishes
  *
  *
- *    slots:
- *
- *      layout - occupies area above delete zone
- *               default -> drag-drop-list
- *      preview - placed under file dropzone
- *                default -> empty
  *
  *
  * @customElement
@@ -98,13 +87,13 @@ import {
   html
 }                 from '@spriteful/spriteful-element/spriteful-element.js';
 import {
-  compose, 
+  compose,
+  deepClone,
   join, 
   map, 
   split
 }                 from '@spriteful/lambda/lambda.js';
 import {
-  isDisplayed, 
   listen, 
   message, 
   schedule,
@@ -117,14 +106,12 @@ import services   from '@spriteful/services/services.js';
 import '@spriteful/app-icons/app-icons.js';
 import '@spriteful/app-modal/app-modal.js';
 import '@spriteful/app-spinner/app-spinner.js';
-import '@spriteful/cms-icons/cms-icons.js';
-import '@spriteful/drag-drop-list/drag-drop-list.js';
-import '@spriteful/drag-drop-files/drag-drop-files.js';
-import '@spriteful/lazy-video/lazy-video.js';
 import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-image/iron-image.js';
 import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-input/paper-input.js';
+import './preview-list.js';
+import './drag-drop-files.js';
 
 
 const trim                = str => str.trim();
@@ -132,15 +119,18 @@ const toLower             = str => str.toLowerCase();
 const removeSpacesAndCaps = compose(trim, split(' '), map(toLower), join(''));
 
 
+const KILOBYTE = 1024;
+const MEGABYTE = 1048576;
+
 const formatFileSize = size => {
-  if (size < 1024) {
+  if (size < KILOBYTE) {
     return `${size}bytes`;
   } 
-  else if (size >= 1024 && size < 1048576) {
-    return `${(size / 1024).toFixed(1)}KB`;
+  else if (size >= KILOBYTE && size < MEGABYTE) {
+    return `${(size / KILOBYTE).toFixed(1)}KB`;
   } 
-  else if (size >= 1048576) {
-    return `${(size / 1048576).toFixed(1)}MB`;
+  else if (size >= MEGABYTE) {
+    return `${(size / MEGABYTE).toFixed(1)}MB`;
   }
 };
 
@@ -175,12 +165,53 @@ const getImageFileDeletePaths = path => {
   ];
 };
 
-
-const collectionToDataObj = collection => {
-  return collection.reduce((accum, obj) => {
+// update index props based on the drag-drop-list elements order (listItems)
+const addIndexes = (data, listItems) => {
+  const keys = Object.keys(data);
+  // use the position in the listItems array as new index
+  const indexedData = keys.map(key => {
+    const obj   = data[key];
+    const index = listItems.findIndex(item => 
+                    item.name === obj.name);
+    return {...obj, index};
+  });
+  // current items data
+  const sorted   = indexedData.filter(obj => obj.index > -1);
+  // new items data
+  const unsorted = indexedData.filter(obj => obj.index === -1);
+  // add initial indexes for new data starting 
+  // where the current data leaves off
+  const startIndex     = sorted.length;
+  const orderedNewData = unsorted.map((obj, index) => {
+    const newIndex = startIndex + index;
+    return {...obj, index: newIndex};
+  });
+  // merge current and new data
+  const ordered = [...sorted, ...orderedNewData];
+  // from array back to a data obj
+  return ordered.reduce((accum, obj) => {
     accum[obj.name] = obj;
     return accum;
   }, {});
+};
+
+
+const deleteStorageFiles = (data, path) => {
+  // lookup the file data item using path and get its type
+  const {type} = 
+    Object.values(data).find(obj => 
+      obj.path === path);
+  // test the file type, 
+  // if its an image, 
+  // then delete the optim_ and 
+  // thumb_ files from storage as well
+  if (type && type.includes('image')) {
+    const paths    = getImageFileDeletePaths(path);
+    const promises = paths.map(path => services.deleteFile(path));
+    return Promise.all(promises);
+  }
+
+  return services.deleteFile(path);
 };
 
 
@@ -214,16 +245,11 @@ class FileUploader extends SpritefulElement {
         type: Boolean,
         value: false
       },
-
+      // firestore data
       _dbData: Object,
 
-      _directory: {
-        type: String,
-        computed: '__computeDirectory(coll, doc)'
-      },
-
       _filesToRename: Array,
-
+      // drives preview-list repeater
       _items: {
         type: Array,
         computed: '__computeItems(_dbData, field)'
@@ -267,20 +293,11 @@ class FileUploader extends SpritefulElement {
           }
         }
         return accum;
-      }, []);
+      }, [])
+      // filter out missing entries caused from deleting items
+      .filter(item => item); 
 
     return items;
-  }
-
-
-  __computeThumbnailSrc(item) {
-    if (!item) { return '#'; }
-
-    const {original, _tempUrl, thumbnail} = item;
-
-    if (thumbnail) { return thumbnail; }
-    if (original)  { return original; }
-    return _tempUrl;
   }
 
 
@@ -295,29 +312,6 @@ class FileUploader extends SpritefulElement {
   __computeDirectory(coll, doc) {
     if (!coll || !doc) { return; }
     return `${coll}/${doc}`;
-  }
-
-
-  __computeListClass(multiple) {
-    return multiple ? '' : 'center-list';
-  }
-
-
-  __computeIronImageHidden(item) {
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('image');
-  }
-
-
-  __computeIronIconHidden(item) {
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('audio');
-  }
-
-
-  __computeLazyVideoHidden(item) {    
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('video');
   }
 
 
@@ -372,24 +366,11 @@ class FileUploader extends SpritefulElement {
     });
   }
 
-  // iron-image on-loaded-changed
-  async __handleImageLoadedChanged(event) {
-    const {detail, model} = event;
-    if (!model.item) { return; }
-    const {value: loaded}      = detail;
-    const {original, _tempUrl} = model.item;
-
-    if (loaded && _tempUrl && !original) {
-      await schedule();
-      window.URL.revokeObjectURL(_tempUrl);
-    }
-  }
-
 
   __renameInputChanged(event) {
     const {value}            = event.detail;
     const {name}             = event.model.item;
-    this._newFileNames[name] = value;
+    this._newFileNames[name] = removeSpacesAndCaps(value);
   }
   // listen for data changes
   // resolve the promise when the 
@@ -407,51 +388,28 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  async __delete(name) { 
-    const {optimized, original, path, type} = this._dbData[name];
+  __deleteDbFileData(name) {
+    return services.deleteField({
+      coll:   this.coll, 
+      doc:    this.doc, 
+      field: `${this.field}.${name}`
+    });
+  }
+
+
+  async __delete(name) {
+    // clone to survive deletion and fire with event
+    const fileData = {...this._dbData[name]}; 
+    const {optimized, original, path, type} = fileData;
     // an image that has been uploaded but not yet optimized
     if (type && type.includes('image') && original && !optimized) {
       await this.__waitForCloudProcessing(name);
     }
     if (path) {
-      await this.__deleteStorageFiles(path);
+      await deleteStorageFiles(this._dbData, path);
     }
-    return this.__deleteDbFileData(name);
-  }
-
-  // update index props based on the drag-drop-list order
-  __addIndexes(data) {
-    // drag-drop-list elements
-    const sortedItems = this.selectAll('.sortable').
-                          filter(el => isDisplayed(el)).
-                          map(el => el.item);
-
-    const keys = Object.keys(data);
-    // use the position in the sortedItems array as new index
-    const indexedData = keys.map(key => {
-      const obj   = data[key];
-      const index = sortedItems.findIndex(item => 
-                      item.name === obj.name);
-      return {...obj, index};
-    });
-    // current items data
-    const sorted   = indexedData.filter(obj => obj.index > -1);
-    // new items data
-    const unsorted = indexedData.filter(obj => obj.index === -1);
-    // add initial indexes for new data starting 
-    // where the current data leaves off
-    const startIndex     = sorted.length;
-    const orderedNewData = unsorted.map((obj, index) => {
-      const newIndex = startIndex + index;
-      return {...obj, index: newIndex};
-    });
-    // merge current and new data
-    const ordered = [...sorted, ...orderedNewData];
-    // from array back to a data obj
-    return ordered.reduce((accum, obj) => {
-      accum[obj.name] = obj;
-      return accum;
-    }, {});
+    await this.__deleteDbFileData(name);
+    this.fire('file-deleted', fileData);
   }
 
 
@@ -460,7 +418,10 @@ class FileUploader extends SpritefulElement {
                    {...this._dbData, ...obj} : // merge with existing data
                    obj; // set new data
 
-    const orderedData = this.__addIndexes(data);
+    // preview-list's drag-drop-list elements
+    const listItems = this.$.preview.getListItems();
+    // update index props based on the drag-drop-list elements order (listItems)
+    const orderedData = addIndexes(data, listItems);
     
     return services.set({
       coll: this.coll,
@@ -472,9 +433,9 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  async __addNewItems(files) {
+  async __addNewFileItems(files) {
     const newItems = files.reduce((accum, file) => {
-      const {name, newName, size, _tempUrl = null, type} = file;
+      const {name, newName, size, type, _tempUrl = null} = file;
       const sizeStr = formatFileSize(size);
       const words   = name.split('.');
       const ext     = words[words.length - 1];
@@ -493,6 +454,9 @@ class FileUploader extends SpritefulElement {
       return accum;
     }, {});
 
+    this.$.dropZone.addFiles(files);
+    this.fire('files-received', {files});
+
     if (!this.multiple) {
       // delete previous file and its data
       if (this._items && this._items.length) {
@@ -501,16 +465,23 @@ class FileUploader extends SpritefulElement {
       }
     }
 
-    this.__saveFileData(newItems);
+    return this.__saveFileData(newItems);
   }
 
 
-  __handleFileSaved(event) {
+  async __handleFileSaved(event) {
     const {name, original, path} = event.detail;
+    const fileData = {...this._dbData[name], original, path}; // merge with existing file data
+    await this.__saveFileData({[name]: fileData});
+    this.fire('file-uploaded', fileData);
+  }
 
-    this.__saveFileData({
-      [name]: {...this._dbData[name], original, path} // merge with existing file data
-    });
+
+  async __resetRenameFilesModal() {
+    await schedule();       
+    await this.$.renameFilesModal.close();
+    this._filesToRename = undefined;
+    this._newFileNames  = {};
   }
 
 
@@ -526,16 +497,13 @@ class FileUploader extends SpritefulElement {
         }
         return file;
       });
-      this.__addNewItems(renamedFiles);
-      this.$.fileDropZone.addFiles(renamedFiles);
-      await schedule();       
-      await this.$.renameFilesModal.close();
-      this._filesToRename = undefined;
-      this._newFileNames  = {};
+      await this.__addNewFileItems(renamedFiles);
+      await this.__resetRenameFilesModal();
     }
     catch (error) {
       if (error === 'click debounced') { return; }
       console.error(error);
+      warn('An error occured while adding files.');
     }
   }
 
@@ -547,16 +515,13 @@ class FileUploader extends SpritefulElement {
         file.newName = nameFromFileName(file.name);
         return file;
       });
-      this.__addNewItems(files);
-      this.$.fileDropZone.addFiles(files);
-      await schedule();       
-      await this.$.renameFilesModal.close();
-      this._filesToRename = undefined;
-      this._newFileNames  = {};
+      await this.__addNewFileItems(files);
+      await this.__resetRenameFilesModal();
     }
     catch (error) {
       if (error === 'click debounced') { return; }
       console.error(error);
+      warn('An error occured while adding files.');
     }
   }
 
@@ -565,7 +530,7 @@ class FileUploader extends SpritefulElement {
     const {files} = event.detail;
     // drives modal repeater       
     this._filesToRename = files.map(file => {
-      if (file.type.includes('image')) { 
+      if (file.type.includes('image') || file.type.includes('video')) { 
         file._tempUrl = window.URL.createObjectURL(file);
       }
       return file;
@@ -582,60 +547,25 @@ class FileUploader extends SpritefulElement {
     this.__saveFileData(); // save new indexes after resort
   }
 
-  // fake deleting the element to play nicely with drag-drop-list
-  __hideSortableElement(name) {
-    const elements = this.selectAll('.sortable');
-    const element  = elements.find(element => 
-      element.item && element.item.name === name);
-    if (!element) { return; }
-    element.classList.remove('sortable');
-    element.style.display = 'none';
-    return element;
-  }
-
   // from file upload progress 'X' button
   async __handleFileRemoved(event) {
     try {
       await this.$.spinner.show('Deleting file data...');      
-      const {name}  = event.detail;
-      const element = this.__hideSortableElement(name);
+      const {name}   = event.detail;
+      const element  = this.$.preview.hideSortableElement(name);
+      // fire a clone to survive deletion
+      const fileData = {...this._dbData[name]};
+      this.fire('upload-cancelled', fileData);
       if (!element) { return; }
       await this.__delete(name);
     }
     catch (error) {
       console.error(error);
+      await warn('An error occured while cancelling the upload.');
     }
     finally {
       this.$.spinner.hide();
     }
-  }
-
-
-  __deleteStorageFiles(path) {
-    // lookup the file data item using path and get its type
-    const {type} = 
-      Object.values(this._dbData).find(obj => 
-        obj.path === path);
-    // test the file type, 
-    // if its an image, 
-    // then delete the optim_ and 
-    // thumb_ files from storage as well
-    if (type && type.includes('image')) {
-      const paths    = getImageFileDeletePaths(path);
-      const promises = paths.map(path => services.deleteFile(path));
-      return Promise.all(promises);
-    }
-
-    return services.deleteFile(path);
-  }
-
-
-  __deleteDbFileData(name) {
-    return services.deleteField({
-      coll:   this.coll, 
-      doc:    this.doc, 
-      field: `${this.field}.${name}`
-    });
   }
 
   // drag-drop delete area modal
@@ -643,11 +573,12 @@ class FileUploader extends SpritefulElement {
     try {
       await this.clicked();
       await this.$.spinner.show('Deleting file data...');
-      const files  = this.$.fileDropZone.getFiles();
+      const files  = this.$.dropZone.getFiles();
       const {name} = this._itemToDelete;
-      const fileToDelete = files.find(file => file.newName === name);
+      const fileToDelete = files.find(file => 
+                             file.newName === name);
       if (fileToDelete) { // cancel upload and remove file from dropzone list
-        this.$.fileDropZone.removeFile(fileToDelete);
+        this.$.dropZone.removeFile(fileToDelete);
       }       
       await this.$.deleteConfirmModal.close();     
       await this.__delete(name);
@@ -657,7 +588,7 @@ class FileUploader extends SpritefulElement {
       console.error(error);
     }
     finally {
-      this.__hideSortableElement(this._itemToDelete.name);
+      this.$.preview.hideSortableElement(this._itemToDelete.name);
       this._targetToDelete.style.opacity = '1';
       this._targetToDelete = undefined;
       this._itemToDelete   = undefined;
@@ -695,7 +626,7 @@ class FileUploader extends SpritefulElement {
       // override transform to keep item over delete zone
       target.style.transform = `translate3d(${xCenter}px, ${yCenter}px, 1px)`;
       this._targetToDelete   = target;
-      this._itemToDelete     = item;
+      this._itemToDelete     = {...item};
       await schedule();
       this.$.deleteConfirmModal.open();
     }
@@ -706,6 +637,8 @@ class FileUploader extends SpritefulElement {
     if (!name) { 
       throw new Error('file-uploader delete method must have a name argument present.'); 
     }
+    // clone to survive deletion
+    const fileData = {...this._dbData[name]};
 
     try {
       await this.$.spinner.show('Deleting file data...');
@@ -716,7 +649,8 @@ class FileUploader extends SpritefulElement {
       await warn('Sorry, an error occured while trying to delete the file!');
     }
     finally {
-      return this.$.spinner.hide();
+      await this.$.spinner.hide();
+      return fileData;
     }
   }
 
@@ -727,7 +661,7 @@ class FileUploader extends SpritefulElement {
       const names    = Object.keys(this._dbData);
       const promises = names.map(name => this.__delete(name));
       await Promise.all(promises);
-      this.$.fileDropZone.reset();
+      this.$.dropZone.reset();
     }
     catch (error) {
       console.error(error);
@@ -740,7 +674,7 @@ class FileUploader extends SpritefulElement {
 
 
   getData() {
-    return this._dbData;
+    return deepClone(this._dbData);
   }
 
 }

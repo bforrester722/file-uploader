@@ -9,47 +9,6 @@
     --drop-zone-background-color: var(--app-light-color);
   }
 
-  *[hidden] {
-    display: none;
-  }
-  
-  drag-drop-list {
-    display:        flex;
-    flex-direction: column;
-  }
-
-  .center-list {
-    align-items: center;
-  }
-
-  .sortable {
-    display:          inline-flex;
-    position:         relative;
-    background-color: black;
-  }
-
-  .list-items {
-    width:            20vmax;
-    min-width:        128px;
-    min-height:       128px;
-    background-color: black;
-    transition:       transform 0.2s ease-out;
-  }
-
-  .list-items:hover {
-    transform: scale(1.1, 1.1);
-  }
-
-  .list-names {
-    position:         absolute;
-    bottom:           0px;
-    left:             0px;
-    padding:          8px;
-    font-size:        14px;
-    color:            white;
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-
   #max-width-container {
     display:        flex;
     flex-direction: column;
@@ -77,25 +36,10 @@
     height: 40px;
   }
 
-  #fileDropZone {
+  #dropZone {
     margin:                  16px 0px;
     background-color:        var(--drop-zone-background-color);
     --yo-file-hover-bgcolor: var(--app-primary-color);
-  }
-
-  #publish-changes-btn {
-    margin:           16px 0px;
-    color:            white;
-    background-color: var(--app-accent-color);
-  }
-
-  #publish-changes-btn[disabled] {
-    color:            var(--diabled-text-color);
-    background-color: var(--app-disabled-color);
-  }
-
-  .no-save-button {
-    display: none;
   }
 
   strong {
@@ -131,48 +75,13 @@
 
 
 <div id="container">
-  <drag-drop-list id="dragList"
-                  class$="[[__computeListClass(multiple)]]"
-                  sortable=".sortable" 
-                  on-item-dropped="__handleDeleteDrop" 
-                  on-sort-finish="__handleSortFinished">
-    <template id="sortListRepeater" 
-              is="dom-repeat" 
-              items="[[_items]]">
-      <div class="sortable" 
-           item="[[item]]">
 
-
-
-        <!-- TODO: hide iron-image for non image/video files. show icon placeholder -->
-
-        <iron-image class="list-items"
-                    hidden="[[__computeIronImageHidden(item)]]"
-                    src="[[__computeThumbnailSrc(item)]]" 
-                    fade 
-                    preload 
-                    sizing="contain"
-                    on-loaded-changed="__handleImageLoadedChanged">
-        </iron-image>
-
-
-        <iron-icon class="list-items" 
-                   hidden="[[__computeIronIconHidden(item)]]"
-                   icon="cms-icons:audio">
-        </iron-icon>
-
-        <lazy-video class="list-items" 
-                    hidden="[[__computeLazyVideoHidden(item)]]" 
-                    src="[[item.original]]">
-        </lazy-video>
-
-
-
-
-        <div class="list-names">[[item.name]]</div>
-      </div>
-    </template>
-  </drag-drop-list>
+  <preview-list id="preview"
+                items="[[_items]]" 
+                multiple="[[multiple]]" 
+                on-list-item-dropped="__handleDeleteDrop" 
+                on-list-sort-finished="__handleSortFinished">
+  </preview-list>
 
   <div id="max-width-container">
     <div id="deleteArea" 
@@ -182,11 +91,11 @@
       </iron-icon>
       <div>Drop file here to delete</div>
     </div>
-    <drag-drop-files id="fileDropZone"
+    <drag-drop-files id="dropZone"
                      class="max-width"
                      accept="[[__computeFileAccept(accept)]]"
                      disable-auto-upload
-                     directory="[[_directory]]"
+                     directory="[[__computeDirectory(coll, doc)]]"
                      field="[[field]]"
                      multiple="[[multiple]]"
                      on-disabled-auto-upload-files-added="__handleFilesAdded"
@@ -195,6 +104,8 @@
     </drag-drop-files>
   </div>
 </div>
+
+<app-spinner id="spinner"></app-spinner>
 
 
 <app-modal id="deleteConfirmModal"
@@ -235,7 +146,7 @@
     <template is="dom-repeat" items="[[_filesToRename]]">
       <div class="file-name-inputs">
         <iron-image class="rename-modal-images"
-                    src$="[[item._tempUrl]]" 
+                    src="[[item._tempUrl]]" 
                     fade 
                     preload 
                     sizing="contain">
@@ -265,5 +176,3 @@
     </paper-button> 
   </div>
 </app-modal>
-
-<app-spinner id="spinner"></app-spinner>
