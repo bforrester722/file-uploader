@@ -6,27 +6,25 @@
  *
  *  properites:
  *
- *	
- *  	items - collection of file data objects that drives the template repeater
- *
- *		multiple - one (false) or many (true) preview items	  
- *	
+ *  
+ *    items - collection of file data objects that drives the template repeater
+ *  
  *
  *
  *  events:
  *
  *
  *    'list-item-dropped' - fired any time an item is dropped
- * 													detail: {data (x, y coordinates), target} 
+ *                          detail: {data (x, y coordinates), target} 
  *
- * 		'list-sort-finished' - fired any time the list is sorted
+ *    'list-sort-finished' - fired any time the list is sorted
  *
  *  
  *  methods:
  *
  *
  *    hideSortableElement(name) - name (file data name key)
- * 																returns the element newly hidden
+ *                                returns the element newly hidden
  *
  *
  *
@@ -62,37 +60,35 @@ class PreviewList extends SpritefulElement {
   static get properties() {
     return {
 
-    	items: Array,
-      // one file upload or multiple files
-      multiple: {
-        type: Boolean,
-        value: false
-      }
+      items: Array,
 
     };
   }
 
 
-  __computeListClass(multiple) {
-    return multiple ? '' : 'center-list';
+  __computeSortableClass(type) {
+    if (type && type.includes('video')) {
+      return 'video';
+    }
+    return '';
   }
 
 
-  __computeIronImageHidden(item) {
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('image');
+  __computeIronImageHidden(type) {
+    if (!type) { return true; }
+    return !type.includes('image');
   }
 
 
-  __computeIronIconHidden(item) {
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('audio');
+  __computeIronIconHidden(type) {
+    if (!type) { return true; }
+    return !type.includes('audio');
   }
 
 
-  __computeLazyVideoHidden(item) {    
-    if (!item || !item.type) { return true; }
-    return !item.type.includes('video');
+  __computeLazyVideoHidden(type) {    
+    if (!type) { return true; }
+    return !type.includes('video');
   }
 
 
@@ -139,12 +135,25 @@ class PreviewList extends SpritefulElement {
 
 
   __handleDrop(event) {
-  	this.fire('list-item-dropped', event.detail);
+    this.fire('list-item-dropped', event.detail);
   }
 
 
   __handleSort() {
     this.fire('list-sort-finished');
+  }
+  // prevent the dragList from collapsing entirely
+  // for a few frames, since the template is re-rendered
+  async __measureMinHeight() {
+    try {
+      await this.debounce('file-uploader-preview-list-debounce', 100);
+      const {height} = this.$.dragList.getBoundingClientRect();
+      this.$.dragList.style['min-height'] = `${height}px`;
+    }
+    catch (error) {
+      if (error === 'debounced') { return; }
+      console.error(error);
+    }
   }
 
   // fake deleting the element to play nicely with drag-drop-list
@@ -157,10 +166,11 @@ class PreviewList extends SpritefulElement {
     element.style.display = 'none';
     return element;
   }
-
-
+  // used to update indexes
+  // return an array that is ordered exactly
+  // as represented in the ui
   getListItems() {
-  	return this.selectAll('.sortable').
+    return this.selectAll('.sortable').
              filter(el => isDisplayed(el)).
              map(el => el.item);
   }

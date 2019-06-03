@@ -4,28 +4,27 @@
   *[hidden] {
     display: none;
   }
-  
-  drag-drop-list {
-    display:        flex;
-    flex-direction: column;
-  }
-
-  .center-list {
-    align-items: center;
-  }
 
   .sortable {
-    display:          inline-flex;
-    position:         relative;
-    background-color: black;
+    display:       inline-flex;
+    position:      relative;
+    width:         20vmax;
+    height:        20vmax;
+    min-width:     128px;
+    min-height:    128px;
+    max-width:     288px;
+    max-height:    144px;
+    margin:        4px;
+    border-radius: 3px;
+    overflow:      hidden;
+    background-color: var(--app-background-color);
   }
 
   .list-items {
-    width:            20vmax;
-    min-width:        128px;
-    min-height:       128px;
-    background-color: black;
-    transition:       transform 0.2s ease-out;
+    width:      100%;
+    height:     100%;  
+    transition: transform 0.2s ease-out;
+    background-color: var(--app-body-color);
   }
 
   .list-items:hover {
@@ -33,13 +32,23 @@
   }
 
   .list-names {
-    position:         absolute;
-    bottom:           0px;
-    left:             0px;
-    padding:          8px;
-    font-size:        14px;
-    color:            white;
+    position:  absolute;
+    top:       0px;
+    left:      0px;
+    padding:   8px;
+    font-size: 14px;
+    z-index:   1;
+    color:     var(--light-text-color);
     background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .video {
+    width:      20vmax;
+    height:     12vmax;
+    min-width:  288px;
+    min-height: 164px;
+    max-width:  576px;
+    max-height: 328px;
   }
 
 </style>
@@ -52,26 +61,27 @@
                 on-sort-finish="__handleSort">
   <template id="sortListRepeater" 
             is="dom-repeat" 
-            items="[[items]]">
-    <div class="sortable" 
+            items="[[items]]"
+            on-dom-change="__measureMinHeight">
+    <div class$="sortable [[__computeSortableClass(item.type)]]" 
          item="[[item]]">
 
       <iron-image class="list-items"
-                  hidden="[[__computeIronImageHidden(item)]]"
+                  hidden="[[__computeIronImageHidden(item.type)]]"
                   src="[[__computeImgSrc(item)]]" 
                   fade 
                   preload 
-                  sizing="contain"
+                  sizing="cover"
                   on-loaded-changed="__handleImageLoadedChanged">
       </iron-image>
 
       <iron-icon class="list-items" 
-                 hidden="[[__computeIronIconHidden(item)]]"
+                 hidden="[[__computeIronIconHidden(item.type)]]"
                  icon="cms-icons:audio">
       </iron-icon>
 
       <lazy-video class="list-items" 
-                  hidden="[[__computeLazyVideoHidden(item)]]" 
+                  hidden="[[__computeLazyVideoHidden(item.type)]]" 
                   src="[[__computeVideoSrc(item)]]"
                   on-metadata-loaded="__handleMetadataLoaded">
       </lazy-video>

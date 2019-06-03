@@ -622,23 +622,23 @@
     "@polymer/iron-iconset-svg" "^3.0.1"
     "@polymer/polymer" "^3.1.0"
 
-"@spriteful/drag-drop-list@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-list/-/drag-drop-list-1.0.0.tgz#da11146172a6aeeb1a86cf68941a00a0f08e94f9"
-  integrity sha512-8gxb+Fa8GRcBUXwEZR7y8Xx7IfRAm1rWHvHd9gJIZ4E1piLdypOOrWdbH1Me6l8CCORooE3ZeyeXd8qe8NMZyA==
+"@spriteful/drag-drop-list@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@spriteful/drag-drop-list/-/drag-drop-list-1.0.1.tgz#fde6b7baa46156c6734d1a7f54ecee0d26bbc3de"
+  integrity sha512-m5+0oD7J29WoOL1YmNbfVO5uBTj8h0AJDUAlfQcOBNRhsRuXgs2gomwUWUH9rNjj/4+se241yzyvQ/tAVyzq1A==
   dependencies:
-    "@polymer/polymer" "^3.1.0"
-    "@spriteful/utils" "^1.1.6"
+    "@polymer/polymer" "^3.2.0"
+    "@spriteful/utils" "^1.2.4"
 
 "@spriteful/lambda@^1.3.3", "@spriteful/lambda@^1.3.5", "@spriteful/lambda@^1.3.9":
   version "1.3.9"
   resolved "https://registry.yarnpkg.com/@spriteful/lambda/-/lambda-1.3.9.tgz#c9d82ab82e4b9a99897bff5b5e219c3fcca1699d"
   integrity sha512-14gisc0Ng7u/9TZD8+aX76/uedau9CRpjK47C5XEtZm4tmDR/kvaJ7FS9tl9OP4BAwmqwfULNPFhoEVLRIXOew==
 
-"@spriteful/lazy-video@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@spriteful/lazy-video/-/lazy-video-1.0.1.tgz#cb4db3c3059f981e03e36be8ffe6f42e7a716e8c"
-  integrity sha512-5xnAKex4Wq78WhAuVFqZAiewIgWupqWV4Lg4cuUFHa5Fmgur18Cfpoi/cjV7Vd91IzX/Z7MehrxwCvF1InRu3g==
+"@spriteful/lazy-video@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@spriteful/lazy-video/-/lazy-video-1.0.2.tgz#27643351df1599895932131c24fa95eb814ad011"
+  integrity sha512-6hIv0jIab0iRXowRXJMZOSRrTegFhs/kK7BY0fjAUCl2ieYPxZmY02AnHarmkmpX3JMaa0Urvv5dfAxjpSGRQQ==
   dependencies:
     "@polymer/polymer" "^3.2.0"
     "@spriteful/app-spinner" "^1.0.0"
