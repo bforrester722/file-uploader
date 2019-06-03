@@ -1,6 +1,6 @@
 {
   "name": "@spriteful/file-uploader",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Accepts files from user and handles uploading/optimization/deleting/previewing/rearranging",
   "main": "file-uploader.js",
   "scripts": {
@@ -28,9 +28,9 @@
     "@spriteful/app-modal": "^1.0.0",
     "@spriteful/app-spinner": "^1.0.0",
     "@spriteful/cms-icons": "^1.0.1",
-    "@spriteful/drag-drop-list": "^1.0.0",
+    "@spriteful/drag-drop-list": "^1.0.1",
     "@spriteful/lambda": "^1.3.9",
-    "@spriteful/lazy-video": "^1.0.1",
+    "@spriteful/lazy-video": "^1.0.2",
     "@spriteful/services": "^2.1.7",
     "@spriteful/spriteful-element": "^1.0.4",
     "@spriteful/utils": "^1.2.4",
