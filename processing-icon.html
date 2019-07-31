@@ -1,0 +1,49 @@
+
+<style>
+
+	:host {
+		display: none;
+		height:  24px;
+		width: 	 24px;
+		color: 	 var(--app-primary-color);
+	}
+	
+	svg {
+		height: 100%;
+		width:  100%;
+		fill:   currentColor;
+	}
+
+	rect {
+		transition: transform 0.8s var(--spriteful-ease);
+	}
+
+	#box1 {
+		transform-origin: 6.5px 6.5px;
+	}
+
+	#box2 {
+		transform-origin: 17.5px 6.5px;
+	}
+
+	#box3 {
+		transform-origin: 6.5px 17.5px;
+	}
+
+	#box4 {
+		transform-origin: 17.5px 17.5px;
+	}
+
+	.rotate {
+		transform: rotate(135deg);
+	}
+
+</style>
+
+
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">	
+	<rect id="box1" x="2"  y="2"  width="9" height="9"/>	
+	<rect id="box2" x="13" y="2"  width="9" height="9"/>	
+	<rect id="box3" x="2"  y="13" width="9" height="9"/>	
+	<rect id="box4" x="13" y="13" width="9" height="9"/>
+</svg>
