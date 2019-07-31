@@ -661,6 +661,10 @@ class FileUploader extends SpritefulElement {
       const names    = Object.keys(this._dbData);
       const promises = names.map(name => this.__delete(name));
       await Promise.all(promises);
+      await services.deleteDocument({
+        coll: this.coll,
+        doc:  this.doc
+      });
       this.$.dropZone.reset();
     }
     catch (error) {
