@@ -484,6 +484,13 @@
   dependencies:
     "@webcomponents/shadycss" "^1.8.0"
 
+"@polymer/polymer@^3.3.0":
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/@polymer/polymer/-/polymer-3.3.0.tgz#52a0665ac29654728e8f46e8ee178c02c49efdd0"
+  integrity sha512-rij7suomS7DxdBamnwr/Xa0V5hpypf7I9oYKseF2FWz5Xh2a3wJNpVjgJy1adXVCxqIyPhghsrthnfCt7EblsQ==
+  dependencies:
+    "@webcomponents/shadycss" "^1.9.1"
+
 "@polymer/prism-element@^3.0.0-pre.25":
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/@polymer/prism-element/-/prism-element-3.0.1.tgz#b35d53eec9ecea5e5fec7c82c7e978e760e53501"
@@ -614,10 +621,10 @@
     typeface-roboto "^0.0.54"
     web-animations-js "^2.3.1"
 
-"@spriteful/cms-icons@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@spriteful/cms-icons/-/cms-icons-1.0.1.tgz#dc5c8a765a9843c065cfb23bec99ab9d0b9dc96b"
-  integrity sha512-gq8LMYDHJXHIvKioA4he2yqTVqggG3BJZH/lsxXMuQm2WqHKC0fe69luNCeYYgQShJrOMRo4NrT3Bsa+DY9ccg==
+"@spriteful/cms-icons@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@spriteful/cms-icons/-/cms-icons-1.0.2.tgz#d2974ca4c6a19c4feed5bf597f73a2ccf5a06214"
+  integrity sha512-2MoPT8o8gGAmQnV5MWkOgMw478kXG6Mh/fuW2Nsof1pGQV5n031gaVLjoObBEg9MVC8ZeRW5H+v/C2L+jghvpg==
   dependencies:
     "@polymer/iron-iconset-svg" "^3.0.1"
     "@polymer/polymer" "^3.1.0"
@@ -714,7 +721,7 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.14.7.tgz#1854f0a9aa8d2cd6818d607b3d091346c6730362"
   integrity sha512-on4MmIDgHXiuJDELPk1NFaKVUxxCFr37tm8E9yN6rAiF5Pzp/9bBfBHkoexqRiY+hk/Z04EJU9kKEb59YqJ82A==
 
-"@webcomponents/shadycss@^1.8.0":
+"@webcomponents/shadycss@^1.8.0", "@webcomponents/shadycss@^1.9.1":
   version "1.9.1"
   resolved "https://registry.yarnpkg.com/@webcomponents/shadycss/-/shadycss-1.9.1.tgz#d769fbadfa504f11b84caeef26701f89070ec49a"
   integrity sha512-IaZOnWOKXHghqk/WfPNDRIgDBi3RsVPY2IFAw6tYiL9UBGvQRy5R6uC+Fk7qTZsReTJ0xh5MTT8yAcb3MUR4mQ==
@@ -1515,10 +1522,10 @@ mkdirp@*, mkdirp@0.5.1, mkdirp@^0.5.0, mkdirp@^0.5.1:
   dependencies:
     minimist "0.0.8"
 
-mocha@^6.1.4:
-  version "6.1.4"
-  resolved "https://registry.yarnpkg.com/mocha/-/mocha-6.1.4.tgz#e35fada242d5434a7e163d555c705f6875951640"
-  integrity sha512-PN8CIy4RXsIoxoFJzS4QNnCH4psUCPWc4/rPrst/ecSJJbLBkubMiyGCP2Kj/9YnWbotFqAoeXyXMucj7gwCFg==
+mocha@^6.2.0:
+  version "6.2.0"
+  resolved "https://registry.yarnpkg.com/mocha/-/mocha-6.2.0.tgz#f896b642843445d1bb8bca60eabd9206b8916e56"
+  integrity sha512-qwfFgY+7EKAAUAdv7VYMZQknI7YJSGesxHyhn6qD52DV8UcSZs5XwCifcZGMVIE4a5fbmhvbotxC0DLQ0oKohQ==
   dependencies:
     ansi-colors "3.2.3"
     browser-stdout "1.3.1"
@@ -2058,10 +2065,10 @@ util-deprecate@~1.0.1:
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
   integrity sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8=
 
-wct-mocha@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/wct-mocha/-/wct-mocha-1.0.0.tgz#2e83938572cb854740773cf1dc21f25358446c62"
-  integrity sha512-rvDjW4kJMV8/lpihKMDHMZwycT5ALtoLni/Q0Ggdg1rPRpIW5pjoslSR/UIl2gWRMYqAs9nFRVYxASwEYG6brA==
+wct-mocha@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/wct-mocha/-/wct-mocha-1.0.1.tgz#296723bacc131a2e5cdaf642e459cb9a1311a230"
+  integrity sha512-7k4krdiFcODjdo9uAxHDNpFm8AwFZUhKdUXMIdoJZzF6NHq3aONrvv/uPYvTDGYZxap4mEO53kSl/RDKIv8b8g==
 
 web-animations-js@^2.3.1:
   version "2.3.1"

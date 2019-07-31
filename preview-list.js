@@ -47,6 +47,7 @@ import '@spriteful/drag-drop-list/drag-drop-list.js';
 import '@spriteful/lazy-video/lazy-video.js';
 import '@polymer/iron-icon/iron-icon.js';
 import '@polymer/iron-image/iron-image.js';
+import './processing-icon.js';
 
 
 class PreviewList extends SpritefulElement {

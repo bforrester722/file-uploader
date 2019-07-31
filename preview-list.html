@@ -51,6 +51,12 @@
     max-height: 328px;
   }
 
+  processing-icon {
+    position: absolute;
+    right:    8px;
+    bottom:   8px;
+  }
+
 </style>
 
 
@@ -90,6 +96,8 @@
         <div>[[item.name]]</div>
         <div>[[item.sizeStr]]</div>
       </div>
+
+      <processing-icon item="[[item]]"></processing-icon>
 
     </div>
   </template>
