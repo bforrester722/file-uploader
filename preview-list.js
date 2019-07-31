@@ -148,8 +148,14 @@ class PreviewList extends SpritefulElement {
   async __measureMinHeight() {
     try {
       await this.debounce('file-uploader-preview-list-debounce', 100);
-      const {height} = this.$.dragList.getBoundingClientRect();
-      this.$.dragList.style['min-height'] = `${height}px`;
+      if (this.items && this.items.length) {
+        const {height} = this.$.dragList.getBoundingClientRect();
+        this.$.dragList.style['min-height'] = `${height}px`;
+      }
+      // reset if there are no more items to display
+      else {
+        this.$.dragList.style['min-height'] = 'unset';
+      }
     }
     catch (error) {
       if (error === 'debounced') { return; }
