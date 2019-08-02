@@ -8,25 +8,19 @@
     --drop-zone-background-color: var(--app-light-color);
   }
 
-  #max-width-container {
-    display:        flex;
-    flex-direction: column;
-    align-items:    center;
-    margin:         32px 0px;
-  }
-
-  .max-width {
-    max-width: 400px;
-    width:     100%;
+  #zone-container {
+    display:               grid;
+    grid-template-columns: 1fr 1fr;
+    grid-column-gap:       8px;
+    max-width:             414px;
+    margin:                16px auto 0px auto;
   }
 
   #deleteArea {
-    display:          flex;
-    flex-direction:   column;
-    align-items:      center;
-    margin:           16px 0px;
-    padding:          16px 0px;
-    color:            var(--app-error-color);
+    padding:    8px;
+    text-align: center;
+    border:     4px dashed var(--paper-grey-600);
+    color:      var(--app-error-color);
     background-color: var(--divider-color);
   }
 
@@ -36,7 +30,6 @@
   }
 
   #dropZone {
-    margin:                  16px 0px;
     background-color:        var(--drop-zone-background-color);
     --yo-file-hover-bgcolor: var(--app-primary-color);
   }
@@ -81,16 +74,8 @@
                 on-list-sort-finished="__handleSortFinished">
   </preview-list>
 
-  <div id="max-width-container">
-    <div id="deleteArea" 
-         class="max-width">
-      <iron-icon id="delete-icon" 
-                 icon="app-icons:delete-forever">
-      </iron-icon>
-      <div>Drop file here to delete</div>
-    </div>
+  <div id="zone-container">    
     <drag-drop-files id="dropZone"
-                     class="max-width"
                      accept="[[__computeFileAccept(accept)]]"
                      disable-auto-upload
                      directory="[[__computeDirectory(coll, doc)]]"
@@ -100,6 +85,12 @@
                      on-file-removed="__handleFileRemoved"
                      on-file-saved="__handleFileSaved">
     </drag-drop-files>
+    <div id="deleteArea">
+      <iron-icon id="delete-icon" 
+                 icon="app-icons:delete-forever">
+      </iron-icon>
+      <div>Drop preview item here</div>
+    </div>
   </div>
 </div>
 

@@ -12,7 +12,9 @@
   #droparea {
     display:        flex;
     flex-direction: column;
-    padding:        16px;
+    align-items:    center;
+    height:         calc(100% - 24px);
+    padding:        8px;
     text-align:     center;
     cursor:         pointer;
     color:          var(--yo-file-color, var(--paper-grey-600));
@@ -43,7 +45,6 @@
   }
 
   .icon {
-    margin: auto;
     height: var(--yo-file-icon-height, 40px);
     width:  var(--yo-file-icon-width, 40px);
   }
