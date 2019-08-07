@@ -58,46 +58,6 @@
     color:       var(--yo-file-feedback-color, var(--paper-red-600));
   }
 
-  .listbox.single:hover {
-    cursor:           pointer;
-    background-color: var(--yo-file-hover-bgcolor, var(--paper-grey-50));
-  }
-
-  .listbox > .label {
-    padding-top: .5em;
-    display:      none;
-  }
-
-  .listbox.single > .label {
-    display:    block;
-    text-align: center;
-    color:      var(--yo-file-color, var(--paper-grey-600));
-    font-size: .9em;
-  }
-
-  .item {
-    display: none;
-  }
-
-  .displayed {
-    display: grid;
-  }
-
-  .slide-up {
-    animation: slide-up 0.3s ease-out;
-  }
-
-  @keyframes slide-up {
-
-    0% {
-      transform: translateY(0px);
-    }
-    100% {
-      transform: translateY(-111px);
-    }
-
-  }
-
 </style>
 
 
@@ -112,22 +72,3 @@
   <span class="label">[[label]]</span>
   <span class="feedback">[[feedbackText]]</span>
 </label>
-
-<div id="listbox" class="listbox" role="listbox">
-  <div class="label">
-    <span>[[label]]</span>
-    <span class="feedback">[[feedbackText]]</span>
-  </div>
-  <template is="dom-repeat" items="[[_items]]">
-    <file-item class="item displayed" 
-               directory="[[directory]]"
-               file="[[item.file]]"
-               index="[[index]]"
-               metadata="[[_metadata]]"
-               on-remove-file="__removeFile"
-               on-click="__fileItemClicked"
-               on-upload-complete="__fileUploadComplete"
-               on-animationend="__itemAnimationEnd">
-    </file-item>
-  </template>
-</div>

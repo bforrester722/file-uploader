@@ -1,0 +1,48 @@
+
+<style>
+
+  :host {
+    display: block;
+  }
+
+  .item {
+    display: none;
+  }
+
+  .displayed {
+    display: grid;
+  }
+
+  .slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+
+  @keyframes slide-up {
+
+    0% {
+      transform: translateY(0px);
+    }
+    100% {
+      transform: translateY(-111px);
+    }
+
+  }
+
+</style>
+
+
+<div id="listbox" class="listbox" role="listbox">
+  <template is="dom-repeat" 
+  					items="[[files]]">
+    <file-item class="item displayed" 
+               directory="[[directory]]"
+               file="[[item.file]]"
+               index="[[index]]"
+               metadata="[[_metadata]]"
+               on-remove-file="__removeFile"
+               on-click="__fileItemClicked"
+               on-upload-complete="__fileUploadComplete"
+               on-animationend="__itemAnimationEnd">
+    </file-item>
+  </template>
+</div>

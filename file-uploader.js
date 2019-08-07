@@ -112,6 +112,7 @@ import '@polymer/paper-button/paper-button.js';
 import '@polymer/paper-input/paper-input.js';
 import './preview-list.js';
 import './drag-drop-files.js';
+import './upload-list.js';
 
 
 const trim                = str => str.trim();
@@ -167,10 +168,9 @@ const getImageFileDeletePaths = path => {
 
 // update index props based on the drag-drop-list elements order (listItems)
 const addIndexes = (data, listItems) => {
-  const keys = Object.keys(data);
+  const values = Object.values(data);
   // use the position in the listItems array as new index
-  const indexedData = keys.map(key => {
-    const obj   = data[key];
+  const indexedData = values.map(obj => {
     const index = listItems.findIndex(item => 
                     item.name === obj.name);
     return {...obj, index};
@@ -247,13 +247,12 @@ class FileUploader extends SpritefulElement {
       },
       // firestore data
       _dbData: Object,
+      // drives upload-list
+      _files: Array,
 
       _filesToRename: Array,
       // drives preview-list repeater
-      _items: {
-        type: Array,
-        computed: '__computeItems(_dbData, field)'
-      },
+      _items: Array,
 
       _itemToDelete: Object,
 
@@ -270,34 +269,9 @@ class FileUploader extends SpritefulElement {
 
   static get observers() {
     return [
-      '__collDocFieldChanged(coll, doc, field)'
+      '__collDocFieldChanged(coll, doc, field)',
+      '__dbDataChanged(_dbData)'
     ];
-  }
-
-
-  __computeItems(data) {
-    if (!data) { return; }
-
-    const keys = Object.keys(data);
-
-    const items = keys.
-      reduce((accum, key) => {
-        const item = data[key];
-        if (item) {          
-          const {index} = item;
-          if (typeof index === 'number') {
-            accum[index] = item;
-          }
-          else {
-            accum = [...accum, item];
-          }
-        }
-        return accum;
-      }, [])
-      // filter out missing entries caused from deleting items
-      .filter(item => item); 
-
-    return items;
   }
 
 
@@ -347,15 +321,29 @@ class FileUploader extends SpritefulElement {
       await wait(500);
     }
 
-    const callback = async docData => {
-      this._dbData = undefined; // force template to restamp
-      await schedule();         // force template to restamp
+    const callback = docData => {
       this._dbData = docData[field];
-      this.fire('data-changed', this._dbData);
+      const values = Object.values(this._dbData);
+
+      if (this._orderedNames) {
+        this._items = this._orderedNames.map(name => 
+          values.find(item => 
+            item.name === name));
+        this._orderedNames = undefined; // This reset is why this is not a computed method.
+      }
+      else {
+        this._items = values.sort((a, b) => a.index - b.index);
+      }
     };
 
     const errorCallback = error => {
       this._dbData = undefined;
+      this._items  = undefined;
+      if (
+        error.message && 
+        error.message.includes('document does not exist')
+      ) { return; }
+      console.error(error);
     };
 
     this._unsubscribe = services.subscribe({
@@ -364,6 +352,11 @@ class FileUploader extends SpritefulElement {
       doc,
       errorCallback
     });
+  }
+
+
+  __dbDataChanged(data) {
+    this.fire('data-changed', data);
   }
 
 
@@ -417,12 +410,10 @@ class FileUploader extends SpritefulElement {
     const data = this._dbData ? 
                    {...this._dbData, ...obj} : // merge with existing data
                    obj; // set new data
-
     // preview-list's drag-drop-list elements
     const listItems = this.$.preview.getListItems();
     // update index props based on the drag-drop-list elements order (listItems)
     const orderedData = addIndexes(data, listItems);
-    
     return services.set({
       coll: this.coll,
       doc:  this.doc,
@@ -469,7 +460,7 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  async __handleFileSaved(event) {
+  async __dzFileSaved(event) {
     const {name, original, path} = event.detail;
     const fileData = {...this._dbData[name], original, path}; // merge with existing file data
     await this.__saveFileData({[name]: fileData});
@@ -526,7 +517,7 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  async __handleFilesAdded(event) {
+  async __dzFilesAdded(event) {
     const {files} = event.detail;
     // drives modal repeater       
     this._filesToRename = files.map(file => {
@@ -540,7 +531,11 @@ class FileUploader extends SpritefulElement {
   }
 
 
-  __handleSortFinished() {
+  __previewListSortFinished() {
+    this._orderedNames = this._items.
+                           filter(item => item).
+                           map(item => item.name);
+
     if (this._itemToDelete) {
       this._targetToDelete.style.opacity = '0';
     }
@@ -548,7 +543,7 @@ class FileUploader extends SpritefulElement {
   }
 
   // from file upload progress 'X' button
-  async __handleFileRemoved(event) {
+  async __dzFileRemoved(event) {
     try {
       await this.$.spinner.show('Deleting file data...');      
       const {name}   = event.detail;
@@ -568,6 +563,31 @@ class FileUploader extends SpritefulElement {
     }
   }
 
+
+  __dzHideUploadItem(event) {
+    this.$.uploadList.hideUploadItem(event.detail.index);
+  }
+
+
+  __dzResetUploadList() {
+    this.$.uploadList.reset();
+  }
+
+
+  __uploadListItemClicked() {
+    this.$.dropZone.itemClicked();
+  }
+
+
+  __uploadListUploadComplete(event) {
+    this.$.dropZone.uploadComplete(event.detail);
+  }
+
+
+  __uploadListRemoveFileByIndex(event) {
+    this.$.dropZone.removeFileByIndex(event.detail.index);
+  }
+
   // drag-drop delete area modal
   async __confirmDeleteButtonClicked() {
     try {
@@ -580,7 +600,7 @@ class FileUploader extends SpritefulElement {
       if (fileToDelete) { // cancel upload and remove file from dropzone list
         this.$.dropZone.removeFile(fileToDelete);
       }       
-      await this.$.deleteConfirmModal.close();     
+      await this.$.deleteConfirmModal.close(); 
       await this.__delete(name);
     }
     catch (error) {
@@ -611,7 +631,7 @@ class FileUploader extends SpritefulElement {
   }
   // see if item was dropped over the delete area
   // compare pointer coordinates with area position
-  async __handleDeleteDrop(event) {
+  async __previewListDeleteDrop(event) {
     const {data, target}             = event.detail;
     const {x, y}                     = data;
     const {top, right, bottom, left} = this.$.deleteArea.getBoundingClientRect();
