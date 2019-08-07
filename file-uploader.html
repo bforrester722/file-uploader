@@ -8,7 +8,7 @@
     --drop-zone-background-color: var(--app-light-color);
   }
 
-  #zone-container {
+  #zone-grid {
     display:               grid;
     grid-template-columns: 1fr 1fr;
     grid-column-gap:       8px;
@@ -70,20 +70,21 @@
 
   <preview-list id="preview"
                 items="[[_items]]" 
-                on-list-item-dropped="__handleDeleteDrop" 
-                on-list-sort-finished="__handleSortFinished">
+                on-list-item-dropped="__previewListDeleteDrop" 
+                on-list-sort-finished="__previewListSortFinished">
   </preview-list>
 
-  <div id="zone-container">    
+  <div id="zone-grid">  
     <drag-drop-files id="dropZone"
                      accept="[[__computeFileAccept(accept)]]"
                      disable-auto-upload
-                     directory="[[__computeDirectory(coll, doc)]]"
-                     field="[[field]]"
+                     items="{{_files}}"
                      multiple="[[multiple]]"
-                     on-disabled-auto-upload-files-added="__handleFilesAdded"
-                     on-file-removed="__handleFileRemoved"
-                     on-file-saved="__handleFileSaved">
+                     on-disabled-auto-upload-files-added="__dzFilesAdded"
+                     on-file-removed="__dzFileRemoved"
+                     on-file-saved="__dzFileSaved"
+                     on-hide-upload-item="__dzHideUploadItem"
+                     on-reset-upload-list="__dzResetUploadList">
     </drag-drop-files>
     <div id="deleteArea">
       <iron-icon id="delete-icon" 
@@ -92,6 +93,16 @@
       <div>Drop preview item here</div>
     </div>
   </div>
+
+  <upload-list id="uploadList"
+               directory="[[__computeDirectory(coll, doc)]]" 
+               field="[[field]]"
+               files="[[_files]]"
+               on-upload-list-file-item-clicked="__uploadListItemClicked"
+               on-upload-list-upload-complete="__uploadListUploadComplete"
+               on-upload-list-remove-file-by-index="__uploadListRemoveFileByIndex">
+  </upload-list>
+
 </div>
 
 <app-spinner id="spinner"></app-spinner>

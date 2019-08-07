@@ -166,9 +166,17 @@ class PreviewList extends SpritefulElement {
   // fake deleting the element to play nicely with drag-drop-list
   hideSortableElement(name) {
     const elements = this.selectAll('.sortable');
-    const element  = elements.find(element => 
-      element.item && element.item.name === name);
+    const element  = elements.find(element =>
+      !element.item ||
+      element.item.name === name
+    );
+    // reset prior hidden elements
+    elements.forEach(el => {
+      el.style.display = 'initial';
+    });
+
     if (!element) { return; }
+    
     element.classList.remove('sortable');
     element.style.display = 'none';
     return element;

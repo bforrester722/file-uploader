@@ -13,9 +13,7 @@ import {
 }                 from '@spriteful/spriteful-element/spriteful-element.js';
 import htmlString from './drag-drop-files.html';
 import '@spriteful/app-icons/app-icons.js';
-import '@spriteful/cms-icons/cms-icons.js';
 import '@polymer/iron-icon/iron-icon.js';
-import './file-item.js';
 
 
 class SpritefulDragDropFiles extends SpritefulElement {
@@ -39,23 +37,22 @@ class SpritefulDragDropFiles extends SpritefulElement {
         value: false,
         reflectToAttribute: true
       },
-      // the firebase storage file directory ie. 'images/home_carousel'
-      directory: String,
+
       // when true, the 'disabled-auto-upload-files-added' event is fired
       // and consumer is responsible for calling the addFiles(files) method
       disableAutoUpload: Boolean,
 
       feedbackText: String,
-      // firestore document field to use for saving file data after processing
-      // ie. 'backgroundImg', 'catImages', ...
-      field: {
-        type: String,
-        value: 'images'
-      },
 
       hideDroparea: {
         type: Boolean,
         value: false
+      },
+
+      items: {
+        type: Array,
+        value: () => ([]),
+        notify: true // bind to upload-list
       },
 
       label: {
@@ -89,16 +86,6 @@ class SpritefulDragDropFiles extends SpritefulElement {
           tooLarge: 'This file is too large, try a file smaller than {maxsize}{unit}',
           tooMany:  'You can only upload {maxfiles} files'
         }
-      },
-
-      _items: {
-        type: Array,
-        value: () => ([])
-      },
-
-      _metadata: {
-        type: Object,
-        computed: '__computeMetadata(field)'
       }
 
     };
@@ -140,12 +127,6 @@ class SpritefulDragDropFiles extends SpritefulElement {
   }
 
 
-  __computeMetadata(field) {
-    // metadata.customMetadata in client sdk, metadata.metadata in cloud functions
-    return {customMetadata: {field}}; 
-  }
-
-
   __unitChanged(unit) {
     const unitLowerCase = unit.toLowerCase();
     if (this._allowedUnits.indexOf(unitLowerCase) == -1) {
@@ -171,13 +152,11 @@ class SpritefulDragDropFiles extends SpritefulElement {
 
 
   __hideDroparea() {
-    this.$.listbox.classList.add('single');
     this.$.droparea.classList.add('hidden');
   }
 
 
   __unhideDroparea() {
-    this.$.listbox.classList.remove('single');
     this.$.droparea.classList.remove('hidden');
   }
 
@@ -200,7 +179,7 @@ class SpritefulDragDropFiles extends SpritefulElement {
 
 
   __handleMultipleFiles(files) {
-    if (this.maxfiles && this._items.length + files.length > this.maxfiles) {
+    if (this.maxfiles && this.items.length + files.length > this.maxfiles) {
       this.__tooManyFeedback();
     }
     else if (files.some(file => this.maxsize && files[0].size > this.getMaxsize())) {
@@ -208,10 +187,10 @@ class SpritefulDragDropFiles extends SpritefulElement {
     }
     else {
       this.__clearFeedback();
-      files.forEach(file => this.push('_items', {file}));
+      files.forEach(file => this.push('items', {file}));
       this.fire('file-added', {files: files});
       this.fire('change',     {files: this.getFiles()});
-      if (this._items.length + files.length === this.maxfiles && this.hideDroparea) {
+      if (this.items.length + files.length === this.maxfiles && this.hideDroparea) {
         this.__hideDroparea();
       }
     }
@@ -224,7 +203,7 @@ class SpritefulDragDropFiles extends SpritefulElement {
     }
     else {
       this.__clearFeedback();
-      this.push('_items', {file});
+      this.push('items', {file});
       if (this.hideDroparea) {
         this.__hideDroparea();
       }
@@ -240,16 +219,16 @@ class SpritefulDragDropFiles extends SpritefulElement {
   //   }
   //   else {
   //     this.__clearFeedback();
-  //     if (this._items.length === 0) {
-  //       this.push('_items', {file});
+  //     if (this.items.length === 0) {
+  //       this.push('items', {file});
   //       this.fire('file-added', {files: [file]});
   //       if (this.hideDroparea) {
   //         this.__hideDroparea();
   //       }
   //     }
   //     else {
-  //       this.push('_items', {file});
-  //       // this.set('_items.0', {file});
+  //       this.push('items', {file});
+  //       // this.set('items.0', {file});
   //     }
 
   //     this.fire('change', {files: this.getFiles()});
@@ -290,37 +269,9 @@ class SpritefulDragDropFiles extends SpritefulElement {
 
 
   __hideItemAndGCFile(index) {
-    const item    = this._items[index];
-    const element = this.selectAll('.item')[index];
-    element.cancelUpload();
-    element.classList.remove('displayed');
-    item.file = undefined;
-  }
-
-
-  // file-item ui x button clicked
-  __removeFile(event) {
-    this.__preventDefaults(event);
-    const {index}         = event.detail;
-    const item            = this._items[index];
-    const {newName: name} = item.file;
-    this.fire('file-removed', {name});
-    this.fire('change', {files: this.getFiles()});
-    this.__unhideDroparea();
-    this.__hideItemAndGCFile(index);
-  }
-
-
-  async __fileItemClicked() {
-    if (this.multiple || !this.hideDroparea) { return; }
-    try {
-      await this.clicked();
-      this.$.input.click();
-    }
-    catch (error) { 
-      if (error === 'click debounced') { return; }
-      console.error(error); 
-    }
+    const item = this.items[index];
+    item.file  = undefined;
+    this.fire('hide-upload-item', {index});
   }
 
   // private helper function
@@ -328,49 +279,9 @@ class SpritefulDragDropFiles extends SpritefulElement {
     this.__hideItemAndGCFile(index);
     this.fire('change', {files: this.getFiles()});
     this.__unhideDroparea();
-    if (this._items.length === 0) {
+    if (this.items.length === 0) {
       this.__clearFeedback();
     }
-  }
-
-
-  // __itemAnimationEnd(event) {
-  //   if (typeof this._indexToDelete !== 'number') { return; }
-  //   this.__deleteFile(this._indexToDelete);
-  //   this._indexToDelete = undefined;
-  // }
-
-
-  // __fileUploadComplete(event) {
-  //   const {index}        = event.detail;
-  //   const items          = this.selectAll('.item');
-  //   const remainingItems = items.slice(index + 1);
-
-  //   if (remainingItems.length) {
-  //     this._indexToDelete = index;
-  //     remainingItems.forEach(item => {
-  //       item.classList.add('slide-up');
-  //     });
-  //   } else {
-  //     this.__deleteFile(index);
-  //   }
-  // }
-
-  // TODO:
-  //      animate the remaining items up before delete
-  //      take care to make sure items to delete are queued properly
-  //      since they may finish uploading before animation is finished
-
-
-  // event handler from file-item
-  __fileUploadComplete(event) {
-    const {name} = event.detail;
-    const index  = this._items.findIndex(obj => {
-      if (!obj.file) { return false; }
-      return obj.file.newName === name;
-    });
-    this.__deleteFile(index);
-    this.fire('file-saved', event.detail);
   }
 
   // private and public api depending on this.disableAutoUpload state
@@ -398,20 +309,36 @@ class SpritefulDragDropFiles extends SpritefulElement {
   }
 
 
+  itemClicked() {
+    if (this.multiple || !this.hideDroparea) { return; }
+    this.$.input.click();
+  }
+
+
   getFiles() {
-    return this._items.
+    return this.items.
       map(item => item.file).
       filter(file => file);
   }
 
 
   getFileByName(name) {
-    return this._items.find(item => item.name === name);
+    return this.items.find(item => item.name === name);
+  }
+
+  // upload-list -> file-item ui x button clicked
+  removeFileByIndex(index) {
+    const item            = this.items[index];
+    const {newName: name} = item.file;
+    this.fire('file-removed', {name});
+    this.fire('change', {files: this.getFiles()});
+    this.__unhideDroparea();
+    this.__hideItemAndGCFile(index);
   }
 
   // public api
   removeFile(file) {
-    const index = this._items.findIndex(obj => obj.file === file);
+    const index = this.items.findIndex(obj => obj.file === file);
     if (index === -1) {
       console.warn('cannot find file to remove in file list');
       return; 
@@ -421,14 +348,17 @@ class SpritefulDragDropFiles extends SpritefulElement {
 
 
   reset() {
-    const elements = this.selectAll('.item');
-    elements.forEach(element => {
-      element.cancelUpload();
-    });
-    this.splice('_items', 0);
+    this.fire('reset-upload-list');
+    this.splice('items', 0);
     this.fire('change', {files: []});
     this.__unhideDroparea();
     this.__clearFeedback();
+  }
+
+
+  uploadComplete(obj) {
+    this.__deleteFile(obj.index);
+    this.fire('file-saved', obj);
   }
 
 }
