@@ -152,13 +152,13 @@ const nameFromPath = path => {
 };
 
 
-const getImageFileDeletePaths = path => {
+const getImageFileDeletePaths = (path, ext) => {
   const words     = path.split('/');
   const base      = words.slice(0, words.length - 1).join('/');
   const fileName  = words[words.length - 1];
   const optimPath = `${base}/optim_${fileName}`;
   const thumbPath = `${base}/thumb_${fileName}`;
-
+  if (ext === 'svg') { return [path]; }
   return [
     path,
     optimPath,
@@ -198,7 +198,8 @@ const addIndexes = (data, listItems) => {
 
 const deleteStorageFiles = (data, path) => {
   // lookup the file data item using path and get its type
-  const {type} = 
+  console.log('find example')
+  const {type, ext} = 
     Object.values(data).find(obj => 
       obj.path === path);
   // test the file type, 
@@ -206,7 +207,7 @@ const deleteStorageFiles = (data, path) => {
   // then delete the optim_ and 
   // thumb_ files from storage as well
   if (type && type.includes('image')) {
-    const paths    = getImageFileDeletePaths(path);
+    const paths    = getImageFileDeletePaths(path, ext);
     const promises = paths.map(path => services.deleteFile(path));
     return Promise.all(promises);
   }
@@ -322,9 +323,9 @@ class FileUploader extends SpritefulElement {
     }
 
     const callback = docData => {
+      if (!docData[field]) { return; }
       this._dbData = docData[field];
       const values = Object.values(this._dbData);
-
       if (this._orderedNames) {
         this._items = this._orderedNames.map(name => 
           values.find(item => 
@@ -447,7 +448,7 @@ class FileUploader extends SpritefulElement {
 
     this.$.dropZone.addFiles(files);
     this.fire('files-received', {files});
-
+    console.log(this.multiple)
     if (!this.multiple) {
       // delete previous file and its data
       if (this._items && this._items.length) {
@@ -594,7 +595,9 @@ class FileUploader extends SpritefulElement {
       await this.clicked();
       await this.$.spinner.show('Deleting file data...');
       const files  = this.$.dropZone.getFiles();
+      console.log(files)
       const {name} = this._itemToDelete;
+      console.log(name)
       const fileToDelete = files.find(file => 
                              file.newName === name);
       if (fileToDelete) { // cancel upload and remove file from dropzone list

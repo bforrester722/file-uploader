@@ -95,9 +95,8 @@ class PreviewList extends SpritefulElement {
 
   __computeImgSrc(item) {
     if (!item) { return '#'; }
-
-    const {original, _tempUrl, thumbnail} = item;
-
+    const {ext, original, _tempUrl, thumbnail} = item;
+    if (ext === 'svg') { return original; }
     if (thumbnail) { return thumbnail; }
     if (original)  { return original; }
     return _tempUrl;
