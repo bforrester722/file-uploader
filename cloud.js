@@ -66,11 +66,11 @@ exports.init = (admin, functions) => {
       const tempLocalFile      = getTempLocalFile(randomFileName);
       const tempLocalDir       = path.dirname(tempLocalFile);
       const tempLocalOptimFile = getTempLocalFile(randomFileName2);    
-      const tempLocalThumbFile = getTempLocalFile(randomFileName3);
       const optimFilePath      = getNewFilePath(fileDir, OPTIM_PREFIX, fileName);
       const thumbFilePath      = getNewFilePath(fileDir, THUMB_PREFIX, fileName);
       const bucket             = admin.storage().bucket(object.bucket);
       const fileRef            = bucket.file(filePath);
+      const tempLocalThumbFile = getTempLocalFile(randomFileName3);
       // Create the temp directory where the storage file will be downloaded
       await mkdirp(tempLocalDir); 
 
@@ -78,40 +78,41 @@ exports.init = (admin, functions) => {
         fileRef.makePublic(), // allow the original to be downloaded publicly
         fileRef.download({destination: tempLocalFile}) // download file from bucket
       ]);
+ 
+      if (fileExt !== '.svg+xml') {
+          // best attempt at a happy medium of size/quality
+        const optimOptions = [
+          tempLocalFile,
+          '-filter',     'Triangle',
+          '-define',     'filter:support=2',
+          '-resize',     `${OPTIM_MAX_WIDTH}>`, // keeps original aspect ratio
+          '-unsharp',    '0.25x0.25+8+0.065',
+          '-dither',     'None',
+          '-posterize',  '136',
+          '-quality',    '82',
+          '-define',     'jpeg:fancy-upsampling=off',
+          '-define',     'png:compression-filter=5',
+          '-define',     'png:compression-level=9',
+          '-define',     'png:compression-strategy=1',
+          '-define',     'png:exclude-chunk=all',
+          '-interlace',  'none',
+          '-colorspace', 'sRGB',
+          '-strip',
+          tempLocalOptimFile
+        ];
 
-      // best attempt at a happy medium of size/quality
-      const optimOptions = [
-        tempLocalFile,
-        '-filter',     'Triangle',
-        '-define',     'filter:support=2',
-        '-resize',     `${OPTIM_MAX_WIDTH}>`, // keeps original aspect ratio
-        '-unsharp',    '0.25x0.25+8+0.065',
-        '-dither',     'None',
-        '-posterize',  '136',
-        '-quality',    '82',
-        '-define',     'jpeg:fancy-upsampling=off',
-        '-define',     'png:compression-filter=5',
-        '-define',     'png:compression-level=9',
-        '-define',     'png:compression-strategy=1',
-        '-define',     'png:exclude-chunk=all',
-        '-interlace',  'none',
-        '-colorspace', 'sRGB',
-        '-strip',
-        tempLocalOptimFile
-      ];
-
-      const thumbOptions = [
-        tempLocalFile, 
-        '-thumbnail', 
-        `${THUMB_MAX_WIDTH}>`, // keeps original aspect ratio
-        tempLocalThumbFile
-      ];
-
-      // Convert the image using ImageMagick.
-      await Promise.all([
-        spawn('convert', optimOptions), 
-        spawn('convert', thumbOptions)
-      ]);
+        const thumbOptions = [
+          tempLocalFile, 
+          '-thumbnail', 
+          `${THUMB_MAX_WIDTH}>`, // keeps original aspect ratio
+          tempLocalThumbFile
+        ];
+        // Convert the image using ImageMagick.
+        await Promise.all([
+          spawn('convert', optimOptions), 
+          spawn('convert', thumbOptions)
+        ]);
+      
       
       const newMetadata = {
         metadata: {
@@ -139,7 +140,7 @@ exports.init = (admin, functions) => {
       fs.unlinkSync(tempLocalOptimFile);
       fs.unlinkSync(tempLocalThumbFile);
       fs.unlinkSync(tempLocalFile);  
-
+     }
 
       // !!!!!!!!!!!!!!!! Code sample below does not work as of 11/6/2018 !!!!!!!!!!!!!!!!!!!!!!
       //    This would be the perfered best practice way to get a 
